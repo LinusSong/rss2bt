@@ -62,11 +62,11 @@ for i in feedlistcontent:
         a2 = re.findall('<span>[^<]*</span>',a1[0])
         a3 = a2[0].find('</span>')
         filesize = a2[0][6:a3]
-        if filesize[-2:] = 'GB':
+        if filesize[-2:] == 'GB':
             multiplier = 1024
-        elif filesize[-2:] = 'MB':
+        elif filesize[-2:] == 'MB':
             multiplier = 1
-        elif filesize[-2:] = 'KB':
+        elif filesize[-2:] == 'KB':
             multiplier = 0.001
         size = float(filesize[:-2]) * multiplier
 #        print os.path.exists('/mnt/sda1/'+listfile)
