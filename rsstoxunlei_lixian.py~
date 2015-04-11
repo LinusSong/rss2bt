@@ -6,7 +6,7 @@ import urllib2
 import feedparser
 import time
 if os.path.exists('/home/l/') == True:
-    prepath = '/home/l/'
+    prepath = 'home/l/'
 else:
     prepath = '/mnt/sda1/'
 feedlistfile = open(prepath + 'feedlist.txt','r+')  #首先有一个叫feedlist.txt的文件，每行格式为"xx动漫:rss地址"
@@ -75,10 +75,7 @@ for i in feedlistcontent:
         if timegone >= 5400 and size < 500:      #写入条件为发布一个半小时以及体积小与500MB
             sql.write(itemtitle)                    
             sql.write('\n')
-            if os.path.exists('/home/l/') == True:
-                execution = 'lx download -bt magnet:?xt=urn:btih:' + infohash + ' --output ' + prepath + listfile + '/' 
-            else:
-                execution = 'python /root/xunlei-lixian-master/lixian_cli.py download -bt magnet:?xt=urn:btih:' + infohash + ' --output ' + prepath + listfile + '/' 
+            execution = 'python /root/xunlei-lixian-master/lixian_cli.py download -bt magnet:?xt=urn:btih:' + infohash + ' --output /mnt/sda1/' + listfile + '/' 
             #注意此处有个bug，如果下载工具要设置为aria2，这里最后一个 + '/'必须去掉
             task.write(execution+'\n')
 #        os.system('python /root/xunlei-lixian-master/lixian_cli.py download -bt magnet:?xt=urn:btih:' + infohash + ' --output /mnt/sda1/' + listfile)   #执行离线下载
