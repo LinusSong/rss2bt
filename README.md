@@ -5,10 +5,12 @@ The script is exactly designed for [share.dmhy.org](http://share.dmhy.org) and [
 - Decode Base32 to Hex, since Xunlei doesn't accept Base32 encoded SHA-1 hash.
 - Work as a rss parser. You know, share.dmhy.org has a very strict limit on your visit frequency, [flexget](http://flexget.com)  easily leads you to be banned. The script greatly reduces your visit frequency.
 - Use a xlsx file as database, which is easier checked than SQL.
+
 ##Config:
-openpyxl is needed.
+
+Openpyxl and feedparser are needed.
 ```
-sudo pip install openpyxl
+sudo pip install openpyxl feedparser
 ```
 Two files is needed:
 - `rss2lx.config`
