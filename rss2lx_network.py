@@ -32,7 +32,7 @@ def CatchFeedinfo(item, HttpProxy, RssUrl):
         infolist = [itemtitle, feedtime, infohash]
     except:
         infolist = ['','','']
-        mailadded = "Wrong RSS address or banned————" + item + '\n'
+        mailadded = "Wrong RSS or banned————" + '\n'
     return infolist, mailadded
     
 def convhash(Base32):

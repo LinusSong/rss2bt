@@ -16,10 +16,10 @@ def ConvFeedlist(wb):
     rowsNum = CheckrowsNum(ws)
     wslist = []
     for i in range(2, rowsNum):
-        Date = append(ws.cell(row = ir, column = 1).value
-        Title = append(ws.cell(row = ir, column = 1).value
-        Group = append(ws.cell(row = ir, column = 1).value
-        Rss = append(ws.cell(row = ir, column = 1).value
+        Date = ws.cell(row = i, column = 1).value
+        Title = ws.cell(row = i, column = 2).value
+        Group = ws.cell(row = i, column = 3).value
+        Rss = ws.cell(row = i, column = 4).value
         wslist.append([Date + "," + Title + "," + Group, Rss])
     return wslist
 

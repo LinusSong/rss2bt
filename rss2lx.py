@@ -17,13 +17,16 @@ def mkdir(path,info):
         os.makedirs(path+info)
 
 def dlCriterion(timestr):
-    try:
-        a = time.mktime(time.strptime(timestr, "%a, %d %b %Y %H:%M:%S +0800"))
-    except:
-        a = time.mktime(time.strptime(timestr, '%Y/%m/%d %H:%M'))
-    b = time.time()
-    timegone = b -a
-    print timegone
+    if timestr <> '':
+        b = time.time()
+        try:
+            a = time.mktime(time.strptime(timestr, "%a, %d %b %Y %H:%M:%S +0800"))
+        except:
+            a = time.mktime(time.strptime(timestr, '%Y/%m/%d %H:%M'))
+        timegone = b -a
+    else:
+        timegone = 600000 
+    return timegone
     
 def Task(infolist, itemTitle):
     normal = ("lx download -bt magnet:?xt=urn:btih:" + infohash + 
@@ -53,21 +56,23 @@ def readConfig():
 def main(path, username, password, Proxy):
     task = open('lixiantask.sh','w')
     task.write('#!/bin/sh'+'\n')
-    wbpath = path + 'bangumi.xlsx'
+    wbpath = path + 'feedlist.xlsx'
     wb = load_workbook(wbpath)
     feedlist = rss2lx_db.ConvFeedlist(wb)
-    CheckWs(feedlist, wb)
+    rss2lx_db.CheckWs(feedlist, wb)
     mailcontent = ''
     for item in feedlist:
+        print item
         itemTitle = item[0]
         itemRss = item[1]
-        lastTitle, lastPubDate = QueryItem(wb[itemTitle])
+        lastTitle, lastPubDate = rss2lx_db.QueryItem(wb[itemTitle])
         mkdir(path, itemTitle)
         if dlCriterion(lastPubDate) <= 572400: 
             continue
         infolist, mailadded = rss2lx_network.CatchFeedinfo(item, Proxy, itemRss)
+        print infolist
         mailcontent += mailadded
-        if infolist[1] = '' or dlCriterion(infolist[1]) < 5400:
+        if infolist[1] == '' or dlCriterion(infolist[1]) < 5400:
             continue
         if lastTitle <> infolist[0]:
             rss2lx_db.appendEntry(wb, itemTitle, infolist)
@@ -76,11 +81,12 @@ def main(path, username, password, Proxy):
             task.write(execution)
         elif dlCriterion(lastPubDate) >= 777600:
             mailcontent += "No update for over 9 days————" + item + '\n'
-    if listformail <> '':
+    if mailcontent <> '':
+        print mailcontent
         try:
             mail(username, password, mailcontent)
         except:
             print "Fail to send mail"
     wb.save(wbpath)
-
-main(readConfig())
+path, username, password, Proxy = readConfig()
+main(path, username, password, Proxy)
