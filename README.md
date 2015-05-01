@@ -7,7 +7,6 @@ The script is exactly designed for [share.dmhy.org](http://share.dmhy.org) and [
 - Use a xlsx file as database, which is easier checked than SQL.
 
 ##Config:
-
 Openpyxl and feedparser are needed.
 ```
 sudo pip install openpyxl feedparser
@@ -28,6 +27,7 @@ Example:
 - `bangumi.xlsx`
 You should put this file at your download path defined in `rss2lx.config`.
 The example is given.
+
 ##Usage
 ```
 python rss2lx.py
