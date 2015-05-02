@@ -8,13 +8,9 @@ import rss2lx_network
 from openpyxl import load_workbook
 from openpyxl import Workbook
 
-def mkdir(path,info):
-    infolist = info + '.list'
-    if os.path.isfile(path+infolist) == False:
-        temp = open(path+infolist,'w')
-        temp.close()
-    if os.path.exists(path+info) == False:
-        os.makedirs(path+info)
+def mkdir(dldir,info):
+    if os.path.exists(dldir+info) == False:
+        os.makedirs(dldir+info)
 
 def dlCriterion(timestr):
     if timestr <> '':
@@ -28,65 +24,72 @@ def dlCriterion(timestr):
         timegone = 600000 
     return timegone
     
-def Task(infolist, itemTitle):
-    normal = ("lx download -bt magnet:?xt=urn:btih:" + infohash + 
-                " --continue --output '" + path + itemTitle + "/'")
-    newitem = infolist[0] + ' || ' + infolist[1] + ' || ' + infolist[2]
-    print newitem
+def Task(infolist):
+    normal = ("lx download -bt magnet:?xt=urn:btih:" + infolist[2] + 
+                " --continue --output '" + dldir + 
+                infolist[0].encode('utf8') + "/'")
+    newitem = (infolist[0].encode('utf8') + ' || ' + 
+               infolist[1].encode('utf8') + ' || ' + infolist[2])
     error = "echo \"" + normal + " # " + newitem + "\" >> taskerror.sh"
     execute = normal + ' || ' + error + '\n'
     return execute
 
 def readConfig():
     try:
-        a = open(rss2lx.config)
-        path = a. readline()
-        username = a. readline()
-        password = a. readline()
-        Proxy = a. readline()
-        if path == '':
-            path = './'
-        if list(path)[-1] <> '/':
-            path += '/'
+        Config = open(os.path.expanduser('~') + '/rss2lx.config').read()
+        Configlist = Config.split('\n')
+        Configlist.pop(-1)
+        dldir = Configlist[0]
+        username = Configlist[1]
+        password = Configlist[2]
+        Proxy = Configlist[3]
+        if dldir == '':
+            dldir = os.path.expanduser('~')
+        if list(dldir)[-1] <> '/':
+            dldir += '/'
     except:
-        path = './'
+        dldir = './'
         username = password = Proxy = ''
-    return path, username, password, Proxy
+    return dldir, username, password, Proxy
 
-def main(path, username, password, Proxy):
-    task = open('lixiantask.sh','w')
+def main(dldir, username, password, Proxy):
+    task = open(os.path.expanduser('~') + '/lixiantask.sh','w')
     task.write('#!/bin/sh'+'\n')
-    wbpath = path + 'feedlist.xlsx'
+    wbpath = dldir + 'feedlist.xlsx'
     wb = load_workbook(wbpath)
     feedlist = rss2lx_db.ConvFeedlist(wb)
     rss2lx_db.CheckWs(feedlist, wb)
     mailcontent = ''
     for item in feedlist:
-        print item
-        itemTitle = item[0]
-        itemRss = item[1]
-        lastTitle, lastPubDate = rss2lx_db.QueryItem(wb[itemTitle])
-        mkdir(path, itemTitle)
+        lastTitle, lastPubDate = rss2lx_db.QueryItem(wb[item[0]])
+        mkdir(dldir, item[0])
         if dlCriterion(lastPubDate) <= 572400: 
             continue
-        infolist, mailadded = rss2lx_network.CatchFeedinfo(item, Proxy, itemRss)
-        print infolist
-        mailcontent += mailadded
-        if infolist[1] == '' or dlCriterion(infolist[1]) < 5400:
+        infolist = rss2lx_network.CatchFeedinfo(item[1], Proxy)
+        if infolist[0] == '':
+            mailcontent += ("Wrong RSS or banned————" + 
+                            item[0] + ':' + item[1] + '\n')
+            continue
+        if dlCriterion(infolist[1]) < 5400:
             continue
         if lastTitle <> infolist[0]:
-            rss2lx_db.appendEntry(wb, itemTitle, infolist)
-            rss2lx_db.updateBan(wb, infolist)
-            execution = Task(infolist, itemTitle)
+            mailcontent += (infolist[0].encode('utf8') + ' ' + 
+                            infolist[1].encode('utf8') + '\n')
+            print infolist[0]
+            rss2lx_db.appendEntry(wb, item[0], infolist)
+            rss2lx_db.appendEntry(wb, "Latest", infolist)
+            execution = Task(infolist)
             task.write(execution)
         elif dlCriterion(lastPubDate) >= 777600:
-            mailcontent += "No update for over 9 days————" + item + '\n'
+            mailcontent += ("No update for over 9 days————" + 
+                            item[0] + ':' + item[1] + '\n')
     if mailcontent <> '':
         print mailcontent
-        try:
-            mail(username, password, mailcontent)
-        except:
-            print "Fail to send mail"
+#        try:
+        rss2lx_network.mail(username, password, mailcontent)
+#        except:
+#            print "Fail to sand mail"
     wb.save(wbpath)
-path, username, password, Proxy = readConfig()
-main(path, username, password, Proxy)
+    
+dldir, username, password, Proxy = readConfig()
+main(dldir, username, password, Proxy)

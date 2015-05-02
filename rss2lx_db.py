@@ -15,7 +15,7 @@ def ConvFeedlist(wb):
     ws = wb["Feedlist"]
     rowsNum = CheckrowsNum(ws)
     wslist = []
-    for i in range(2, rowsNum):
+    for i in range(2, rowsNum + 1):
         Date = ws.cell(row = i, column = 1).value
         Title = ws.cell(row = i, column = 2).value
         Group = ws.cell(row = i, column = 3).value
@@ -49,10 +49,9 @@ def QueryItem(ws):
         PubDate = ''
     return Title, PubDate
 
-def updateBan(wb, infolist):
-    ws = wb["Latest"]
-    ws.append(infolist)
-
-def appendEntry(wb, itemTitle, infolist):
-    ws = wb[itemTitle]
-    ws.append(infolist)
+def appendEntry(wb, wsname, infolist):
+    ws = wb[wsname]
+    rowsNum = CheckrowsNum(ws)
+    ws.cell(row = rowsNum + 1, column = 1).value = infolist[0]
+    ws.cell(row = rowsNum + 1, column = 2).value = infolist[1]
+    ws.cell(row = rowsNum + 1, column = 3).value = infolist[2]

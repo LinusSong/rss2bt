@@ -2,9 +2,23 @@
 import urllib
 import urllib2
 import feedparser
-import time
 import smtplib
 from email.mime.text import MIMEText
+
+def CatchFeedinfo(rss, HttpProxy):
+    try:
+        feed = parseFeed(rss)
+        if feed.entries == []:
+            feed = parseFeedwithUA(rss)
+        if feed.entries == []:
+            feed = parseFeedviaProxy(HttpProxy, rss)
+        feedtime = feed.entries[0].published
+        itemtitle = feed.entries[0].title
+        infohash = convhash(feed.entries[0].enclosures[0].href[20:52])
+        infolist = [itemtitle, feedtime, infohash]
+    except:
+        infolist = ['','','']
+    return infolist
 
 def parseFeedviaProxy(HttpProxy, RssUrl):
     proxy = urllib2.ProxyHandler( {"http":HttpProxy} )
@@ -14,26 +28,16 @@ def parseFeedviaProxy(HttpProxy, RssUrl):
     feed = feedparser.parse(RssUrl, handlers = [proxy])
     return feed
     
-def parseFeed(RssUrl):
+def parseFeedwithUA(RssUrl):
     feedparser.USER_AGENT = ('Mozilla/5.0 (X11; Linux x86_64)'
                              ' AppleWebKit/537.36(KHTML, like Gecko) '
                              'Chrome/42.0.2311.135 Safari/537.36')
     feed = feedparser.parse(RssUrl)
-    
-def CatchFeedinfo(item, HttpProxy, RssUrl):
-    try:
-        feed = parseFeed(RssUrl)
-        if feed.entries == []:
-            feed = parseFeedviaProxy(HttpProxy, RssUrl)
-        feedtime = str(feed.entries[0].published)
-        itemtitle = feed.entries[0].title.encode('utf8')
-        infohash = convhash(feed.entries[0].enclosures[0].href[20:52])
-        mailadded = itemtitle + '    ' + feedtime + '\n'
-        infolist = [itemtitle, feedtime, infohash]
-    except:
-        infolist = ['','','']
-        mailadded = "Wrong RSS or banned————" + '\n'
-    return infolist, mailadded
+    return feed
+
+def parseFeed(RssUrl):
+    feed = feedparser.parse(RssUrl)
+    return feed
     
 def convhash(Base32):
     Dict = {'A':'0','B':'1','C':'2','D':'3','E':'4','F':'5','G':'6','H':'7',
@@ -42,7 +46,7 @@ def convhash(Base32):
             'Y':'O','Z':'P','2':'Q','3':'R','4':'S','5':'T','6':'U','7':'V'}
     convdBase32 = ''
     for i in list(Base32):
-        convdBase32 += Dict[1]
+        convdBase32 += Dict[i]
     return str(hex(int(convdBase32,32)))[2:-1]
             
 def mail(username, password, content):
@@ -50,7 +54,7 @@ def mail(username, password, content):
     mailto = username
     smtpAddr = 'smtp.' + username[username.find('@')+1:]
     msg =MIMEText(content)
-    msg['Subject'] = ''
+    msg['Subject'] = '今日新番'
     msg['to'] = mailto
     msg['From'] = sender
     smtp = smtplib.SMTP(smtpAddr)
