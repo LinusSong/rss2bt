@@ -159,5 +159,8 @@ for item in tasks.keys():
         mailcontent += ("No update for over 9 days————" + 
                         item.encode('utf8') + ':' + tasks[item] + '\n')
     if mailcontent <> '':
-        sendmail(username, password, mailcontent)
+        try:
+            sendmail(username, password, mailcontent)
+        except:
+            print mailcontent
 conn.close()
