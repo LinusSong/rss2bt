@@ -1,0 +1,8 @@
+global:
+  username: '11111@qq.com'
+  password: '11111'
+  dldir: '/home/pi/'
+  HttpProxy: '192.168.1.1:8080'
+tasks:
+  星期日,境界之輪迴,極影: http://share.dmhy.org/topics/rss/rss.xml?keyword=%E5%A2%83%E7%95%8C+%E8%BC%AA+team_id%3A185+GB+720+MP4&sort_id=2
+  星期日,電波教師,幻之: http://share.dmhy.org/topics/rss/rss.xml?keyword=%E6%B3%A2%E6%95%99+team_id%3A430+GB+720+MP4&sort_id=2
