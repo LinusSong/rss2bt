@@ -10,6 +10,7 @@ import feedparser
 import smtplib
 from email.mime.text import MIMEText
 
+# The following four functions are used to parse feed.
 def CatchFeedinfo(title, rss, HttpProxy):
     try:
         feed = parseFeed(rss)
@@ -46,7 +47,8 @@ def parseFeedwithUA(RssUrl):
 def parseFeed(RssUrl):
     feed = feedparser.parse(RssUrl)
     return feed
-    
+
+# The function is used to covent Base32 encoded infohash to hex infohash.
 def convhash(Base32):
     Dict = {'A':'0','B':'1','C':'2','D':'3','E':'4','F':'5','G':'6','H':'7',
             'I':'8','J':'9','K':'A','L':'B','M':'C','N':'D','O':'E','P':'F',
@@ -65,43 +67,53 @@ def mkdir(dldir,item):
     if os.path.exists(dldir+item) == False:
         os.makedirs(dldir+item)
 
+#This is used to extract episode number from title
 def Cal_episode(title):
     a = re.findall("(?<=第)\d+(?=集|话|話|局)",title.encode('utf8'))
     b = re.findall("(?<=【)\d+(?=】)|(?<=\[)\d+(?=\])",title.encode('utf8'))
     c = re.findall("(?<= )\d+(?= )",title.encode('utf8'))
+    d = re.findall("(?<=- )\d+",title.encode('utf8'))
     if len(a) == 1:
         episode = a[0]
     elif len(b) == 1:
         episode = b[0]
     elif len(c) == 1:
         episode = c[0]
+    elif len(d) == 1:
+        episode = d[0]
     else:
         episode = None
     return episode
 
+#Query the title and pubdate of the last episode.
 def Query_Last(series):
+    series = (series,)
     try:
-        a = cell.execute('SELECT title,max(PubDate) from Updated WHERE series = (?);',(series))
-        LastTitle = a[0][0]
-        LastPubDate = a[0][1]
+        cell.execute('SELECT title,max(PubDate) from Updated WHERE series = (?);',series)
+        a = cell.fetchone()
+        LastTitle = a[0]
+        LastPubDate = a[1]
     except:
-        LastTitle = LastPubDate = None
+        LastTitle = None
+        LastPubDate = None
     return LastTitle,LastPubDate
-    
+
+#Calculate how long time has gone
 def Cal_timegone(timestr):
-    timegone = time.time() - time.mktime(time.strptime(timestr, '%Y/%m/%d %H:%M'))
+    timegone = time.time() - time.mktime(time.strptime(timestr, '%Y-%m-%d %H:%M:%S'))
     return timegone
 
-def Task(title, PubDate, infohash):
+#Generate the executation command.
+def Task(item, title, PubDate, infohash):
     normal = ("lx download -bt magnet:?xt=urn:btih:" + infohash + 
                 " --continue --output '" + dldir + 
-                title.encode('utf8') + "/'")
+                item.encode('utf8') + "/'")
     newitem = (title.encode('utf8') + ' || ' + 
                PubDate.encode('utf8') + ' || ' + infohash)
     error = "echo \"" + normal + " # " + newitem + "\" >> taskerror.sh"
     execute = normal + ' || ' + error + '\n'
     return execute
-
+#Send mail.
 def sendmail(username, password, content):
     sender = username
     mailto = username
@@ -117,18 +129,18 @@ def sendmail(username, password, content):
 
 task = open('lixiantask.sh','w')
 task.write('#!/bin/sh'+'\n')
-a = yaml.load(open('config.yml').read())
-username = a['global']['username']
-password = a['global']['password']
-dldir = a['global']['dldir']
-HttpProxy = a['global']['HttpProxy']
-tasks = a['tasks']
+config = yaml.load(open('config.yml').read())
+username = config['global']['username']
+password = config['global']['password']
+dldir = config['global']['dldir']
+HttpProxy = config['global']['HttpProxy']
+tasks = config['tasks']
 conn = sqlite3.connect('bangumi.db')
 cell = conn.cursor()
 try:
-    c.execute("SELECT * FROM Updated;")
+    cell.execute("SELECT * FROM Updated;")
 except:
-    c.execute('''CREATE TABLE Updated 
+    cell.execute('''CREATE TABLE Updated 
               (weekday TEXT,series TEXT,title TEXT,episode INTEGER,
               PubDate TEXT,team TEXT,infohash TEXT);''')
 mailcontent = ''
@@ -140,8 +152,9 @@ for item in tasks.keys():
     LastTitle,LastPubDate = Query_Last(series)
     if LastTitle == None:
         pass
-    elif Cal_timegone(lastPubDate) <= 572400: 
+    elif Cal_timegone(LastPubDate) <= 572400: 
         continue
+    print LastTitle,LastPubDate
     title, PubDate, infohash, mailadded = CatchFeedinfo(item, tasks[item], HttpProxy)
     episode = Cal_episode(title)
     if title == None:
@@ -154,13 +167,14 @@ for item in tasks.keys():
         entry = (weekday,series,title,episode,PubDate,team,infohash)
         cell.execute('INSERT INTO Updated VALUES (?,?,?,?,?,?,?)',entry)
         conn.commit()
-        task.write(Task(title, PubDate, infohash))
+        task.write(Task(item, title, PubDate, infohash))
+        print "Ok"
     elif Cal_timegone(lastPubDate) >= 777600:
         mailcontent += ("No update for over 9 days————" + 
                         item.encode('utf8') + ':' + tasks[item] + '\n')
-    if mailcontent <> '':
-        try:
-            sendmail(username, password, mailcontent)
-        except:
-            print mailcontent
+if mailcontent <> '':
+    try:
+        sendmail(username, password, mailcontent)
+    except:
+        print mailcontent
 conn.close()
