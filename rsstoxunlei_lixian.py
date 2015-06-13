@@ -48,7 +48,7 @@ def parseFeed(RssUrl):
     feed = feedparser.parse(RssUrl)
     return feed
 
-# The function is used to covent Base32 encoded infohash to hex infohash.
+# This function is used to covent Base32 encoded infohash to hex infohash.
 def convhash(Base32):
     Dict = {'A':'0','B':'1','C':'2','D':'3','E':'4','F':'5','G':'6','H':'7',
             'I':'8','J':'9','K':'A','L':'B','M':'C','N':'D','O':'E','P':'F',
@@ -147,15 +147,15 @@ mailcontent = ''
 for item in tasks.keys():
     mkdir(dldir,item)
     weekday = item[:3]
-    series = re.findall(".*(?=,)",item[4:])[0]
-    team = re.findall("(?<=,)[^,]*$",item)[0]
+    series = item[4:]
+    team = tasks[item].keys()[0]
     LastTitle,LastPubDate = Query_Last(series)
     if LastTitle == None:
         pass
     elif Cal_timegone(LastPubDate) <= 572400: 
         continue
-    print LastTitle,LastPubDate
-    title, PubDate, infohash, mailadded = CatchFeedinfo(item, tasks[item], HttpProxy)
+    print item.encode('utf8'),team.encode('utf8')
+    title, PubDate, infohash, mailadded = CatchFeedinfo(item, tasks[item].values()[0], HttpProxy)
     episode = Cal_episode(title)
     if title == None:
         mailcontent += mailadded
@@ -169,9 +169,9 @@ for item in tasks.keys():
         conn.commit()
         task.write(Task(item, title, PubDate, infohash))
         print "Ok"
-    elif Cal_timegone(lastPubDate) >= 777600:
+    elif Cal_timegone(LastPubDate) >= 777600:
         mailcontent += ("No update for over 9 days————" + 
-                        item.encode('utf8') + ':' + tasks[item] + '\n')
+                        item.encode('utf8') + ':' + tasks[item].values()[0] + '\n')
 if mailcontent <> '':
     try:
         sendmail(username, password, mailcontent)
