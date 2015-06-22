@@ -3,6 +3,7 @@ import re
 import os
 import sqlite3
 import math
+import base64
 import time
 import yaml
 import urllib2
@@ -29,7 +30,7 @@ def CatchFeedinfo(title, rss, HttpProxy):
         for i in range(len(feed.entries)):
             feedtime = time.strftime("%Y-%m-%d %H:%M:%S",time.strptime(feed.entries[i].published,"%a, %d %b %Y %H:%M:%S +0800"))
             itemtitle = feed.entries[i].title
-            infohash = convhash(feed.entries[i].enclosures[0].href[20:52])
+            infohash = base64.b16encode(base64.b32decode(feed.entries[i].enclosures[0].href[20:52])).lower()
             mailadded = itemtitle.encode('utf-8') + '  ' + feedtime.encode('utf-8') + '\n'
             itemlist.append((itemtitle, feedtime, infohash, mailadded))
     return itemlist
@@ -52,17 +53,6 @@ def parseFeedwithUA(RssUrl):
 def parseFeed(RssUrl):
     feed = feedparser.parse(RssUrl)
     return feed
-
-# This function is used to covent Base32 encoded infohash to hex infohash.
-def convhash(Base32):
-    Dict = {'A':'0','B':'1','C':'2','D':'3','E':'4','F':'5','G':'6','H':'7',
-            'I':'8','J':'9','K':'A','L':'B','M':'C','N':'D','O':'E','P':'F',
-            'Q':'G','R':'H','S':'I','T':'J','U':'K','V':'L','W':'M','X':'N',
-            'Y':'O','Z':'P','2':'Q','3':'R','4':'S','5':'T','6':'U','7':'V'}
-    convdBase32 = ''
-    for i in list(Base32):
-        convdBase32 += Dict[i]
-    return "%040x" % int(convdBase32,32)
 
 def mkdir(dldir,item):
     if os.path.exists(os.path.join(dldir,item)) == False:
