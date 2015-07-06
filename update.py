@@ -1,15 +1,17 @@
 #-*-coding:utf-8 -*-
 import re
 import os
+import sys
 import sqlite3
 import math
 import base64
 import time
-import yaml
 import urllib2
-import feedparser
 import smtplib
 from email.mime.text import MIMEText
+
+import yaml
+import feedparser
 
 # The following four functions are used to parse feed.
 def CatchFeedinfo(title, rss, HttpProxy):
@@ -42,7 +44,7 @@ def parseFeedviaProxy(HttpProxy, RssUrl):
                              'Chrome/42.0.2311.135 Safari/537.36')
     feed = feedparser.parse(RssUrl, handlers = [proxy])
     return feed
-    
+
 def parseFeedwithUA(RssUrl):
     feedparser.USER_AGENT = ('Mozilla/5.0 (X11; Linux x86_64)'
                              ' AppleWebKit/537.36(KHTML, like Gecko) '
@@ -94,10 +96,9 @@ def Cal_timegone(timestr):
 
 #Generate the executation command.
 def Task(item, title, PubDate, infohash, dldir):
-    normal = ("lx download -bt magnet:?xt=urn:btih:" + infohash.encode('utf-8') + 
-                " --continue --output '" + dldir + 
-                item.encode('utf-8') + "/'")
-    newitem = (title.encode('utf-8') + ' || ' + 
+    normal = ("lx download -bt magnet:?xt=urn:btih:" + infohash.encode('utf-8') +
+              " --continue --output '" + os.path.join(dldir,item).encode('utf-8') + "/'")
+    newitem = (title.encode('utf-8') + ' || ' +
                PubDate.encode('utf-8') + ' || ' + infohash.encode('utf-8'))
     error = "echo \"" + normal + " # " + newitem + "\" >> taskerror.sh"
     execute = normal + ' || ' + error + '\n'
@@ -118,20 +119,21 @@ def sendmail(username, password, content):
     smtp.quit()
 
 def main():
+    workpath = sys.path[0]
     task = open('lixiantask.sh','w')
     task.write('#!/bin/sh'+'\n')
-    config = yaml.load(open('config.yml').read())
+    config = yaml.load(open(os.path.join(workpath,'config.yml')).read())
     username = config['global']['username']
     password = config['global']['password']
     dldir = config['global']['dldir']
     HttpProxy = config['global']['HttpProxy']
     tasks = config['tasks']
-    conn = sqlite3.connect('bangumi.db')
+    conn = sqlite3.connect(os.path.join(workpath,'bangumi.db'))
     cell = conn.cursor()
     try:
         cell.execute("SELECT * FROM Updated;")
     except:
-        cell.execute('''CREATE TABLE Updated 
+        cell.execute('''CREATE TABLE Updated
                   (weekday TEXT,series TEXT,title TEXT,episode INTEGER,
                   PubDate TEXT,team TEXT,infohash TEXT);''')
     mailcontent = ''
@@ -143,7 +145,7 @@ def main():
         LastTitle,LastPubDate = Query_Last(cell,series)
         if LastTitle == None:
             pass
-        elif Cal_timegone(LastPubDate) <= 572400: 
+        elif Cal_timegone(LastPubDate) <= 572400:
             continue
         print item.encode('utf-8') + ',' + team.encode('utf-8'),
         title, PubDate, infohash, mailadded = CatchFeedinfo(item, tasks[item].values()[0], HttpProxy)[0]
@@ -161,7 +163,7 @@ def main():
             task.write(Task(item, title, PubDate, infohash, dldir))
             print "Ok"
         elif Cal_timegone(LastPubDate) >= 777600:
-            mailcontent += ("No update for over 9 days————" + 
+            mailcontent += ("No update for over 9 days————" +
                             item.encode('utf-8') + ':' + tasks[item].values()[0] + '\n')
     if mailcontent <> '':
         try:
