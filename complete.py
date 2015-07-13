@@ -7,7 +7,7 @@ import sys
 
 def main():
     workpath = sys.path[0]
-    task = open('lixiantask.sh','w')
+    task = open(os.path.join(workpath,'lixiantask.sh'),'w')
     task.write('#!/bin/sh'+'\n')
     config = yaml.load(open(os.path.join(workpath,'config.yml')).read())
     username = config['global']['username']
@@ -49,7 +49,7 @@ def main():
         for i in a:
             title, PubDate, infohash, episode = i
             if episode not in episodeNums:
-                task.write(update.Task(item, title, PubDate, infohash, dldir))
+                task.write(update.Task(item, title, PubDate, infohash, dldir,workpath))
     conn.close()
 
 if __name__ == '__main__':

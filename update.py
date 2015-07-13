@@ -13,71 +13,66 @@ from email.mime.text import MIMEText
 import yaml
 import feedparser
 
-# The following four functions are used to parse feed.
-def CatchFeedinfo(title, rss, HttpProxy):
-    try:
-        feed = parseFeed(rss)
-        if feed.entries == []:
-            time.sleep(5)
-            feed = parseFeedwithUA(rss)
-        if feed.entries == []:
-            time.sleep(5)
-            feed = parseFeedviaProxy(HttpProxy, rss)
-    except:
-        itemtitle = feedtime = infohash = ''
-        mailadded = "Wrong RSS or banned————" + title + ':' + rss + '\n'
-        itemlist = [(itemtitle, feedtime, infohash, mailadded)]
-    else:
-        itemlist = []
-        for i in range(len(feed.entries)):
-            feedtime = time.strftime("%Y-%m-%d %H:%M:%S",time.strptime(feed.entries[i].published,"%a, %d %b %Y %H:%M:%S +0800"))
-            itemtitle = feed.entries[i].title
-            infohash = base64.b16encode(base64.b32decode(feed.entries[i].enclosures[0].href[20:52])).lower()
-            mailadded = itemtitle.encode('utf-8') + '  ' + feedtime.encode('utf-8') + '\n'
-            itemlist.append((itemtitle, feedtime, infohash, mailadded))
-    return itemlist
-
-def parseFeedviaProxy(HttpProxy, RssUrl):
-    proxy = urllib2.ProxyHandler( {"http":HttpProxy} )
-    feedparser.USER_AGENT = ('Mozilla/5.0 (X11; Linux x86_64)'
-                             ' AppleWebKit/537.36(KHTML, like Gecko) '
-                             'Chrome/42.0.2311.135 Safari/537.36')
-    feed = feedparser.parse(RssUrl, handlers = [proxy])
-    return feed
-
-def parseFeedwithUA(RssUrl):
-    feedparser.USER_AGENT = ('Mozilla/5.0 (X11; Linux x86_64)'
-                             ' AppleWebKit/537.36(KHTML, like Gecko) '
-                             'Chrome/42.0.2311.135 Safari/537.36')
-    feed = feedparser.parse(RssUrl)
-    return feed
-
-def parseFeed(RssUrl):
-    feed = feedparser.parse(RssUrl)
-    return feed
-
 def mkdir(dldir,item):
     if os.path.exists(os.path.join(dldir,item)) == False:
         os.makedirs(os.path.join(dldir,item))
 
-#This is used to extract episode number from title
-def Cal_episode(title):
-    tmplist = []
-    tmplist.append(re.findall("(?<=第)\d+(?=集|话|話|局)",title.encode('utf-8')))
-    tmplist.append(re.findall("(?<=【)\d+(?=】)|(?<=\[)\d+(?=\])",title.encode('utf-8')))
-    tmplist.append(re.findall("(?<= )\d+(?= )",title.encode('utf-8')))
-    tmplist.append(re.findall("(?<=- )\d+",title.encode('utf-8')))
-    tmplist.append(re.findall("\d+(?=[v|V]\d{1})",title.encode('utf-8')))
-    tmplist.append(re.findall("\d+\.5",title.encode('utf-8')))
-    episode = None
-    for i in tmplist:
-        if len(i) == 1:
-            episode = i[0]
-            break
-    return episode
+def CatchFeedinfo(title, rss, HttpProxy):
+    "The function is used to parse feed and extract information"
+    try:
+        feed = parseFeed(rss)
+        if feed.entries == []:
+            time.sleep(5)
+            feed = parseFeed(rss,set_user_agent=True)
+        if feed.entries == []:
+            time.sleep(5)
+            feed = parseFeed(rss,set_user_agent=True,HttpProxy=HttpProxy)
+    except:
+        itemtitle = feedtime = infohash = ''
+        mailadded = "Wrong RSS or you are banned: " + title + '\n'
+        itemlist = [(itemtitle, feedtime, infohash, mailadded)]
+    else:
+        itemlist = []
+        for i in feed.entries:
+            feedtime = time.strftime("%Y-%m-%d %H:%M:%S",time.strptime(i.published,"%a, %d %b %Y %H:%M:%S +0800"))
+            itemtitle = i.title
+            infohash = base64.b16encode(base64.b32decode(i.enclosures[0].href[20:52])).lower()
+            mailadded = itemtitle.encode('utf-8') + '  ' + feedtime.encode('utf-8') + '\n'
+            itemlist.append((itemtitle, feedtime, infohash, mailadded))
+    return itemlist
 
-#Query the title and pubdate of the last episode.
+def parseFeed(url,set_user_agent=False,HttpProxy=None):
+    "Parse feed"
+    if HttpProxy == None:
+        handlers = None
+    else:
+        proxy = urllib2.ProxyHandler( {"http":HttpProxy} )
+        handlers = [proxy]
+    if set_user_agent == True:
+        feedparser.USER_AGENT = ('Mozilla/5.0 (X11; Linux x86_64)'
+                                 ' AppleWebKit/537.36(KHTML, like Gecko) '
+                                 'Chrome/42.0.2311.135 Safari/537.36')
+    feed = feedparser.parse(url,handlers=handlers)
+    return feed
+
+def Cal_episode(title):
+    "Extract episode number from title"
+    expressions = [r"(?<=第)\d+(?=集|话|話|局)",
+                   r"(?<=【)\d+(?=】)|(?<=\[)\d+(?=\])",
+                   r"(?<= )\d+(?= )",
+                   r"(?<=- )\d+",
+                   r"\d+(?=[v|V]\d{1})",
+                   r"\d+\.5",
+                   r"\d+(?=END|end|End| END| end| End)",
+                   r"\d{2}"
+    ]
+    for i in expressions:
+        numbers = re.findall(i,title.encode('utf-8'))
+        if len(numbers) == 1:
+            return numbers[0]
+
 def Query_Last(cell,series):
+    "Query the title and pubdate of the last episode"
     series = (series,)
     try:
         cell.execute('SELECT title,max(PubDate) from Updated WHERE series = (?);',series)
@@ -89,23 +84,23 @@ def Query_Last(cell,series):
         LastPubDate = None
     return LastTitle,LastPubDate
 
-#Calculate how long time has gone
 def Cal_timegone(timestr):
+    "Calculate how long time has gone"
     timegone = time.time() - time.mktime(time.strptime(timestr, '%Y-%m-%d %H:%M:%S'))
     return timegone
 
-#Generate the executation command.
-def Task(item, title, PubDate, infohash, dldir):
+def Task(item, title, PubDate, infohash, dldir, workpath):
+    "Generate the executation command"
     normal = ("lx download -bt magnet:?xt=urn:btih:" + infohash.encode('utf-8') +
               " --continue --output '" + os.path.join(dldir,item).encode('utf-8') + "/'")
     newitem = (title.encode('utf-8') + ' || ' +
                PubDate.encode('utf-8') + ' || ' + infohash.encode('utf-8'))
-    error = "echo \"" + normal + " # " + newitem + "\" >> taskerror.sh"
+    error = "echo \"" + normal + " # " + newitem + "\" >> "+ os.path.join(workpath,"taskerror.sh")
     execute = normal + ' || ' + error + '\n'
     return execute
 
-#Send mail.
 def sendmail(username, password, content):
+    "Send mail"
     sender = username
     mailto = username
     smtpAddr = 'smtp.' + username[username.find('@')+1:]
@@ -120,7 +115,7 @@ def sendmail(username, password, content):
 
 def main():
     workpath = sys.path[0]
-    task = open('lixiantask.sh','w')
+    task = open(os.path.join(workpath,'lixiantask.sh'),'w')
     task.write('#!/bin/sh'+'\n')
     config = yaml.load(open(os.path.join(workpath,'config.yml')).read())
     username = config['global']['username']
@@ -147,8 +142,12 @@ def main():
             pass
         elif Cal_timegone(LastPubDate) <= 572400:
             continue
-        print item.encode('utf-8') + ',' + team.encode('utf-8'),
-        title, PubDate, infohash, mailadded = CatchFeedinfo(item, tasks[item].values()[0], HttpProxy)[0]
+        print item.encode('utf-8') + ',' + team.encode('utf-8')
+        itemlist = CatchFeedinfo(item, tasks[item].values()[0], HttpProxy)
+        if itemlist != []:
+            title, PubDate, infohash, mailadded = itemlist[0]
+        else:
+            mailcontent += item.encode('utf-8') + ',' + team.encode('utf-8') + ": This RSS is wrong!"
         episode = Cal_episode(title)
         if title == None:
             mailcontent += mailadded
@@ -160,7 +159,7 @@ def main():
             entry = (weekday,series,title,episode,PubDate,team,infohash)
             cell.execute('INSERT INTO Updated VALUES (?,?,?,?,?,?,?)',entry)
             conn.commit()
-            task.write(Task(item, title, PubDate, infohash, dldir))
+            task.write(Task(item, title, PubDate, infohash, dldir,workpath))
             print "Ok"
         elif Cal_timegone(LastPubDate) >= 777600:
             mailcontent += ("No update for over 9 days————" +
