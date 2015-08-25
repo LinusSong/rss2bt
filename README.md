@@ -26,5 +26,6 @@ sudo pip install yaml transmissionrpc
 - run `update.py` and a shell script `lixiantask.sh` will be created. You can run it manually.
  - Two parameters are acceptable. Use `-d` to download directly, and use `--change-team` to replace the current team with the team who publishes the latest episode most quickly when the current team hasn't update over 9 days.
  - All failure will be record in  `taskerror.sh`.
+ 
 ##One more thing
 I will share my bangumi list every quarter!
