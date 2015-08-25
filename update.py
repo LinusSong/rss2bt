@@ -20,6 +20,10 @@ class Downloader(object):
             self.IsDownload = True
         else:
             self.IsDownload = False
+        if '-nowait' in sys.argv:
+            self.IsWait = False
+        else:
+            self.IsWait = True
         config_global = yaml.load(open(os.path.join(self.workpath,'config_global.yml')).read())
         self.username = config_global['email_username']
         self.password = config_global['email_password']
@@ -149,8 +153,9 @@ class Entry(Downloader):
         self.infohash = itemlist[0]['infohash']
         self.episode = itemlist[0]['episode']
         self.magnet_origin = itemlist[0]['magnet_origin']
-        if Cal_timegone(self.PubDate) < 5400:
-            raise Exception("Premature For Download")
+        if self.IsWait == True:
+            if Cal_timegone(self.PubDate) < 5400:
+                raise Exception("Premature For Download")
         if LastTitle == self.title and Cal_timegone(LastPubDate) >= 9*86400:
             raise Exception("No Update over 9 Days")
         elif LastTitle == self.title:
