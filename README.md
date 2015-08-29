@@ -31,7 +31,7 @@ commands and parameters:
 - complete [-net|-db] [-w whitelist]
 ####Examples:
 ```
-python rss2lx.py update -download # update database and write commands to lixiantask.sh
+python rss2lx.py update -download # update database and download directly
 python rss2lx.py complete -net -db -w Charlotte # make up the database about Charlotte and write commands for undownloaded items to lixiantask.sh
 ```
 
