@@ -13,10 +13,20 @@ from email.mime.text import MIMEText
 import yaml
 import feedparser
 
+blacklist = ['悠哉日常大王Repeat','偶像大師灰姑娘女孩Ⅱ','ToLoveRuDarkness2nd','魔法少女☆伊莉雅2weiHerz!']
+whitelist = []
+
+def print_help():
+    print("""
+usage:
+  update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
+  complete [-net|-db] [-w whitelist]
+    """)
+
 class Downloader(object):
     def __init__(self):
         self.workpath = sys.path[0]
-        if '-d' in sys.argv:
+        if '-download' in sys.argv:
             self.IsDownload = True
         else:
             self.IsDownload = False
@@ -24,6 +34,18 @@ class Downloader(object):
             self.IsWait = False
         else:
             self.IsWait = True
+        if '-noxunlei' in sys.argv:
+            self.IsXunlei = False
+        else:
+            self.IsXunlei = True
+        if '--update-team' in sys.argv:
+            self.IsChangeteam = True
+        else:
+            self.IsChangeteam = False
+        if '-waitdays' in sys.argv:
+            self.waitdays = float(sys.argv[sys.argv.index('-waitdays')+1])
+        else:
+            self.waitdays = 6.625
         config_global = yaml.load(open(os.path.join(self.workpath,'config_global.yml')).read())
         self.username = config_global['email_username']
         self.password = config_global['email_password']
@@ -52,9 +74,12 @@ class Downloader(object):
             conn.commit()
         finally:
             conn.close()
-        task = open(os.path.join(self.workpath,'lixiantask.sh'),'w')
-        task.write('#!/bin/sh'+'\n')
-        task.close()
+        with open(os.path.join(self.workpath,'lixiantask.sh'),'w') as task:
+            task.write('#!/bin/sh'+'\n')
+        if not os.path.exists(os.path.join(self.workpath,'taskerror.sh')) or \
+        open(os.path.join(self.workpath,'taskerror.sh')).readlines()[0] != '#!/bin/sh\n':
+            with open(os.path.join(self.workpath,'taskerror.sh'),'w') as task:
+                task.write('#!/bin/sh'+'\n')
 
     def Generate_mail(self):
         content = ''
@@ -143,7 +168,7 @@ class Entry(Downloader):
         LastTitle,LastPubDate,LastEpisode = self.Query_Last()
         if LastTitle == None:
             pass
-        elif Cal_timegone(LastPubDate) <= 6*86400+15*3600:
+        elif Cal_timegone(LastPubDate) <= self.waitdays*86400:
             raise Exception("Premature For Parse")
         itemlist = self.GetFeedinfo()
         if itemlist == []:
@@ -188,19 +213,21 @@ class Entry(Downloader):
         conn.close()
 
     def download(self,command,comment):
-        print "Try to download directly"
-        (status, output) = commands.getstatusoutput(command)
-        if status != 0:
+        if self.IsXunlei == True:
+            print("Try to download directly")
+            (status, output) = commands.getstatusoutput(command)
+        if self.IsXunlei == False or status != 0:
             try:
                 import transmissionrpc
-                print "Fail to download directly and try transmissionrpc"
+                print("try transmissionrpc")
                 tc = transmissionrpc.Client(self.transmissionrpc_server,port=9091,user=self.transmissionrpc_user,password=self.transmissionrpc_password)
                 tr = tc.add_torrent(self.magnet_origin,download_dir=os.path.join(self.transmissionrpc_download_path,self.item_key).encode('utf-8'))
-                raise Exception("Use Transmissionrpc to Download")
             except:
                 with open(os.path.join(self.workpath,'taskerror.sh'),'a') as target:
                     target.write(command + ' # ' + comment + '\n')
                 raise Exception("Failed")
+            else:
+                raise Exception("Use Transmissionrpc to Download")
 
     def Generate_command(self):
         "Generate the executation command"
@@ -229,11 +256,11 @@ def Cal_episode(title):
         if len(numbers) == 1:
             return int(numbers[0])
 
-def main():
+def update():
     d = Downloader()
     d.init_db_and_task()
     for item_key in d.tasks.keys():
-        print item_key,
+        print(item_key),
         entry = Entry(item_key)
         try:
             entry_for_db = entry.Get_entry()
@@ -242,34 +269,94 @@ def main():
             if d.IsDownload == True and entry.episode != None:
                 entry.download(command,comment)
                 d.mail['Update'].append({item_key:entry.team + ", " + str(entry.episode)})
-                print 'Update'
+                print('Update')
             elif d.IsDownload == False and entry.episode != None:
                 d.mail['Update'].append({item_key:entry.team + ", " + str(entry.episode)})
                 with open(os.path.join(d.workpath,'lixiantask.sh'),'a') as task:
                     task.write(command + ' # ' + comment + '\n')
-                print 'Update'
+                print('Update')
             elif entry.episode == None:
                 d.mail['Please Check Manually'].append({item_key:entry.team})
                 with open(os.path.join(d.workpath,'taskerror.sh'),'a') as task:
                     task.write(command + ' # ' + comment + '\n')
-                print 'Please Check Manually'
+                print('Please Check Manually')
         except Exception,reason:
             if str(reason) == "Premature For Parse":
-                print str(reason)
+                print(str(reason))
             elif str(reason) in d.mail:
-                print str(reason)
+                print(str(reason))
                 d.mail[str(reason)].append({item_key:entry.team})
-                if str(reason) == "No Update over 9 Days" and '--update-team' in sys.argv:
+                if str(reason) == "No Update over 9 Days" and d.IsChangeteam:
                     entry.Update_team()
             else:
-                print Exception,str(reason)
+                print(Exception),
+                print(str(reason))
     content = d.Generate_mail()
-    print content
+    print(content)
     if content != '':
         try:
             d.Send_mail(content)
         except:
             pass
+
+def complete():
+    d = Downloader()
+    d.init_db_and_task()
+    conn = sqlite3.connect(os.path.join(d.workpath,'bangumi.db'))
+    cur = conn.cursor()
+    if '-w' in sys.argv:
+        whitelist.append(sys.argv[sys.argv.index('-w')+1])
+    for item_key in d.tasks.keys():
+        entry = Entry(item_key)
+        if whitelist != []:
+            if not entry.series.encode('utf-8') in whitelist:
+                continue
+        else:
+            if entry.series.encode('utf-8') in blacklist:
+                continue
+        if '-net' in sys.argv:
+            itemlist = entry.GetFeedinfo()
+            if itemlist == []:
+                continue
+            for epi in itemlist:
+                cur.execute('''SELECT * from Updated
+                                WHERE title = ? AND infohash = ?;''',(epi['title'],epi['infohash']))
+                if cur.fetchone() == None:
+                    item = (entry.weekday,entry.series,epi['title'],epi['episode'],epi['PubDate'],entry.team,epi['infohash'])
+                    if Cal_timegone(epi['PubDate']) < 90*86400:
+                        cur.execute('INSERT INTO Updated VALUES (?,?,?,?,?,?,?)',item)
+                        conn.commit()
+        if '-db' in sys.argv:
+            episodeNums = set()
+            for root,dirs,files in os.walk(os.path.join(d.dldir,item_key)):
+                for name in files:
+                    tmp = Cal_episode(name)
+                    if tmp != None:
+                        episodeNums.add(int(tmp))
+                    else:
+                        episodeNums.add(tmp)
+            episodeNums.discard(None)
+            print(item_key),
+            print(episodeNums)
+            cur.execute('SELECT title, PubDate, infohash, episode FROM Updated WHERE series = (?);',(entry.series,))
+            a = cur.fetchall()
+            for i in a:
+                entry.title, entry.PubDate, entry.infohash, entry.episode = i
+                if entry.episode not in episodeNums:
+                    (command, comment) = entry.Generate_command()
+                    with open(os.path.join(d.workpath,'lixiantask.sh'),'a') as task:
+                        task.write(command + ' # ' + comment + '\n')
+    conn.close()
+
+def main():
+    if len(sys.argv) == 1:
+        print_help()
+    elif sys.argv[1] == "update":
+        update()
+    elif sys.argv[1] == "complete":
+        complete()
+    else:
+        print_help()
 
 if __name__ == "__main__":
     main()

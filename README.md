@@ -23,9 +23,20 @@ sudo pip install yaml transmissionrpc
  - `transmissionrpc_server`, `transmissionrpc_user`, `transmissionrpc_password`, `transmissionrpc_download_path` are for `transmission`.
 
 ##Usage:
-- run `update.py` and a shell script `lixiantask.sh` will be created. You can run it manually.
- - Two parameters are acceptable. Use `-d` to download directly, and use `--change-team` to replace the current team with the team who publishes the latest episode most quickly when the current team hasn't update over 9 days.
- - All failure will be record in  `taskerror.sh`.
- 
+```
+python rss2lx.py <commands> <parameters>
+```
+commands and parameters:
+- update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
+- complete [-net|-db] [-w whitelist]
+####Examples:
+```
+python rss2lx.py update -download # update database and write commands to lixiantask.sh
+python rss2lx.py complete -net -db -w Charlotte # make up the database about Charlotte and write commands for undownloaded items to lixiantask.sh
+```
+
+
+All failure will be record in  `taskerror.sh`.
+
 ##One more thing
 I will share my bangumi list every quarter!
