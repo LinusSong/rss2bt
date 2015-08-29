@@ -20,7 +20,7 @@ def print_help():
     print("""
 usage:
   update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
-  complete [-net|-db] [-w whitelist]
+  complete [-net|-db] [-w item]
     """)
 
 class Downloader(object):

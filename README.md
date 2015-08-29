@@ -21,6 +21,7 @@ sudo pip install yaml transmissionrpc
  - `dldir` is the download directory.
  - `HttpProxy` is the http proxy used when failing to parse feed normally.
  - `transmissionrpc_server`, `transmissionrpc_user`, `transmissionrpc_password`, `transmissionrpc_download_path` are for `transmission`.
+- You can create `config_tasks.yml` by [Animelist](https://github.com/LinusSong/Animelist)
 
 ##Usage:
 ```
@@ -28,13 +29,23 @@ python rss2lx.py <commands> <parameters>
 ```
 commands and parameters:
 - update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
-- complete [-net|-db] [-w whitelist]
+- complete [-net|-db] [-w item]
+
+####Explanation:
+- download: download directly
+- update-team: subscribe the current team for another team who publishes the latest episode most quickly.
+- nowait: in case Xunlei doesn't finish downloading, the episode will not be updated into database in 1.5 hour after an eipsode publishes. This parameter revoke this limit.
+- noxunlei: don't use Xunlei, use transmission directly.
+- waitdays: 6.625 days are waited before another parse in default, and this parameter is to change it.
+- net: make up the database from RSS feed.
+- db: find the items which is not downloaded and write commands for them to lixiantask.sh
+- w: only the item will be checked.
+
 ####Examples:
 ```
 python rss2lx.py update -download # update database and download directly
-python rss2lx.py complete -net -db -w Charlotte # make up the database about Charlotte and write commands for undownloaded items to lixiantask.sh
+python rss2lx.py complete -net -db -w Charlotte # make up the database about Charlotte and write commands for items which is not downloaded to lixiantask.sh
 ```
-
 
 All failure will be record in  `taskerror.sh`.
 
