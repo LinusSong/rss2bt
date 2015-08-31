@@ -15,12 +15,15 @@ import feedparser
 
 blacklist = ['悠哉日常大王Repeat','偶像大師灰姑娘女孩Ⅱ','ToLoveRuDarkness2nd','魔法少女☆伊莉雅2weiHerz!']
 whitelist = []
+mail = {'Update':[],'No Update over 9 Days':[], 'Not Yet Updated':[],
+        'Bad RSS or Banned': [],'Premature For Download':[],'Failed':[],
+        'Please Check Manually':[],'Use Transmissionrpc to Download':[]}
 
 def print_help():
     print("""
 usage:
   update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
-  complete [-net|-db] [-w item]
+  makeup [-net|-db] [-w item]
     """)
 
 class Downloader(object):
@@ -58,9 +61,6 @@ class Downloader(object):
         self.transmissionrpc_download_path = config_global['transmissionrpc_download_path']
         config_tasks = yaml.load(open(os.path.join(self.workpath,'config_tasks.yml')).read())
         self.tasks = config_tasks
-        self.mail = {'Update':[],'No Update over 9 Days':[], 'Not Yet Updated':[],
-                     'Bad RSS or Banned': [],'Premature For Download':[],'Failed':[],
-                     'Please Check Manually':[],'Use Transmissionrpc to Download':[]}
 
     def init_db_and_task(self):
         conn = sqlite3.connect(os.path.join(self.workpath,'bangumi.db'))
@@ -83,9 +83,9 @@ class Downloader(object):
 
     def Generate_mail(self):
         content = ''
-        for i in self.mail:
-            if self.mail[i] != []:
-                content += yaml.safe_dump({i:self.mail[i]},default_flow_style=False,allow_unicode=True)
+        for i in mail:
+            if mail[i] != []:
+                content += yaml.safe_dump({i:mail[i]},default_flow_style=False,allow_unicode=True)
         return content
 
     def Send_mail(self,content):
@@ -113,8 +113,9 @@ class Entry(Downloader):
         if os.path.exists(os.path.join(self.dldir,item_key)) == False:
             os.makedirs(os.path.join(self.dldir,item_key))
 
-    def GetFeedinfo(self):
+    def GetFeedinfo(self, **argv):
         "The function is used to parse feed and extract information"
+        rss = argv.get("rss",self.rss)
         def parseFeed(url,set_user_agent=False,HttpProxy=None):
             if HttpProxy == None:
                 handlers = None
@@ -128,13 +129,13 @@ class Entry(Downloader):
             feed = feedparser.parse(url,handlers=handlers)
             return feed
         try:
-            feed = parseFeed(self.rss)
+            feed = parseFeed(rss)
             if feed.entries == []:
                 time.sleep(5)
-                feed = parseFeed(self.rss,set_user_agent=True)
+                feed = parseFeed(rss,set_user_agent=True)
             if feed.entries == []:
                 time.sleep(5)
-                feed = parseFeed(self.rss,set_user_agent=True,HttpProxy=self.HttpProxy)
+                feed = parseFeed(rss,set_user_agent=True,HttpProxy=self.HttpProxy)
         except:
             itemlist = []
         else:
@@ -191,8 +192,8 @@ class Entry(Downloader):
         dict_tmp = {}
         config_tasks = yaml.load(open(os.path.join(self.workpath,'config_tasks.yml')).read())
         for team in config_tasks[self.item_key]['rss']:
-            self.rss = config_tasks[self.item_key]['rss'][team]
-            iteminfo = self.GetFeedinfo()[0]
+            rss = config_tasks[self.item_key]['rss'][team]
+            iteminfo = self.GetFeedinfo(rss=rss)[0]
             episode = iteminfo['episode']
             PubDate = iteminfo['PubDate']
             if episode != None and episode > LastEpisode:
@@ -202,8 +203,10 @@ class Entry(Downloader):
             for team,PubDate in dict_tmp.items():
                 if PubDate == MinPubDate:
                     config_tasks[self.item_key]['team'] = team
-                    break
-            yaml.safe_dump(config_tasks,file("config_tasks.yml","w"),default_flow_style=False,allow_unicode=True)
+                    self.team = team
+                    self.rss = config_tasks[self.item_key]['rss'][self.team]
+                    yaml.safe_dump(config_tasks,file("config_tasks.yml","w"),default_flow_style=False,allow_unicode=True)
+                    return self.team, self.rss
 
     def Update_db(self,entry_for_db):
         conn = sqlite3.connect(os.path.join(self.workpath,'bangumi.db'))
@@ -236,6 +239,44 @@ class Entry(Downloader):
         comment = self.title.encode('utf-8') + '  ' + self.PubDate.encode('utf-8')
         return command, comment
 
+    def Update_main(self):
+        try:
+            entry_for_db = self.Get_entry()
+            self.Update_db(entry_for_db)
+            (command, comment) = self.Generate_command()
+            if self.IsDownload == True and self.episode != None:
+                self.download(command,comment)
+                mail['Update'].append({self.item_key:self.team + ", " + str(self.episode)})
+                print('Update')
+            elif self.IsDownload == False and self.episode != None:
+                mail['Update'].append({self.item_key:self.team + ", " + str(self.episode)})
+                with open(os.path.join(self.workpath,'lixiantask.sh'),'a') as task:
+                    task.write(command + ' # ' + comment + '\n')
+                print('Update')
+            elif self.episode == None:
+                mail['Please Check Manually'].append({self.item_key:self.team})
+                with open(os.path.join(self.workpath,'taskerror.sh'),'a') as task:
+                    task.write(command + ' # ' + comment + '\n')
+                print('Please Check Manually')
+        except Exception,reason:
+            if str(reason) == "Premature For Parse":
+                print(str(reason))
+            elif str(reason) == "No Update over 9 Days" and self.IsChangeteam:
+                print("Try to change team")
+                result = self.Update_team()
+                if result != None:
+                    print "Success. Retry to update"
+                    self.Update_main()
+                else:
+                    print("Failed")
+                    mail[str(reason)].append({self.item_key:self.team})
+            elif str(reason) in mail:
+                print(str(reason))
+                mail[str(reason)].append({self.item_key:self.team})
+            else:
+                print(Exception),
+                print(str(reason))
+
 def Cal_timegone(timestr):
     "Calculate how long time has gone"
     timegone = time.time() - time.mktime(time.strptime(timestr, '%Y-%m-%d %H:%M:%S'))
@@ -262,35 +303,7 @@ def update():
     for item_key in d.tasks.keys():
         print(item_key),
         entry = Entry(item_key)
-        try:
-            entry_for_db = entry.Get_entry()
-            entry.Update_db(entry_for_db)
-            (command, comment) = entry.Generate_command()
-            if d.IsDownload == True and entry.episode != None:
-                entry.download(command,comment)
-                d.mail['Update'].append({item_key:entry.team + ", " + str(entry.episode)})
-                print('Update')
-            elif d.IsDownload == False and entry.episode != None:
-                d.mail['Update'].append({item_key:entry.team + ", " + str(entry.episode)})
-                with open(os.path.join(d.workpath,'lixiantask.sh'),'a') as task:
-                    task.write(command + ' # ' + comment + '\n')
-                print('Update')
-            elif entry.episode == None:
-                d.mail['Please Check Manually'].append({item_key:entry.team})
-                with open(os.path.join(d.workpath,'taskerror.sh'),'a') as task:
-                    task.write(command + ' # ' + comment + '\n')
-                print('Please Check Manually')
-        except Exception,reason:
-            if str(reason) == "Premature For Parse":
-                print(str(reason))
-            elif str(reason) in d.mail:
-                print(str(reason))
-                d.mail[str(reason)].append({item_key:entry.team})
-                if str(reason) == "No Update over 9 Days" and d.IsChangeteam:
-                    entry.Update_team()
-            else:
-                print(Exception),
-                print(str(reason))
+        entry.Update_main()
     content = d.Generate_mail()
     print(content)
     if content != '':
@@ -299,7 +312,7 @@ def update():
         except:
             pass
 
-def complete():
+def makeup():
     d = Downloader()
     d.init_db_and_task()
     conn = sqlite3.connect(os.path.join(d.workpath,'bangumi.db'))
@@ -353,8 +366,8 @@ def main():
         print_help()
     elif sys.argv[1] == "update":
         update()
-    elif sys.argv[1] == "complete":
-        complete()
+    elif sys.argv[1] == "makeup":
+        makeup()
     else:
         print_help()
 

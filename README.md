@@ -27,9 +27,10 @@ sudo pip install yaml transmissionrpc
 ```
 python rss2lx.py <commands> <parameters>
 ```
-commands and parameters:
+
+####commands and parameters:
 - update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
-- complete [-net|-db] [-w item]
+- markup [-net|-db] [-w item]
 
 ####Explanation:
 - download: download directly
@@ -44,7 +45,7 @@ commands and parameters:
 ####Examples:
 ```
 python rss2lx.py update -download # update database and download directly
-python rss2lx.py complete -net -db -w Charlotte # make up the database about Charlotte and write commands for items which is not downloaded to lixiantask.sh
+python rss2lx.py markup -net -db -w Charlotte # make up the database about Charlotte and write commands for items which is not downloaded to lixiantask.sh
 ```
 
 All failure will be record in  `taskerror.sh`.
