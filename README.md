@@ -29,8 +29,9 @@ python rss2lx.py <commands> <parameters>
 ```
 
 ####commands and parameters:
-- update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
-- markup [-net|-db] [-w item]
+- update [-download|--update-team|-nowait|-noxunlei] [-waitdays days] ---update bangumi
+- markup [-net|-db] [-w item]  --- mark up the the episodes which are not recorded and downloaded
+- test   --- test the rss addresses
 
 ####Explanation:
 - download: download directly
@@ -40,7 +41,7 @@ python rss2lx.py <commands> <parameters>
 - waitdays: 6.625 days are waited before another parse in default, and this parameter is to change it.
 - net: make up the database from RSS feed.
 - db: find the items which is not downloaded and write commands for them to lixiantask.sh
-- w: only the item will be checked.
+- w: only the chosen item will be checked.
 
 ####Examples:
 ```

@@ -20,33 +20,44 @@ mail = {'Update':[],'No Update over 9 Days':[], 'Not Yet Updated':[],
         'Please Check Manually':[],'Use Transmissionrpc to Download':[]}
 
 def print_help():
-    print("""
-usage:
-  update [-download|--update-team|-nowait|-noxunlei] [-waitdays days]
-  makeup [-net|-db] [-w item]
+    print(
+"""usage:
+  update
+    -d --download
+    -u --update-team
+    -nw --nowait
+    -nx --noxunlei
+    -wd --waitdays days
+  makeup
+    -net
+    -db
+    -wl item
+  test
     """)
 
 class Downloader(object):
     def __init__(self):
         self.workpath = sys.path[0]
-        if '-download' in sys.argv:
+        if '--download' in sys.argv or '-d' in sys.argv:
             self.IsDownload = True
         else:
             self.IsDownload = False
-        if '-nowait' in sys.argv:
+        if '--nowait' in sys.argv or '-nw' in sys.argv:
             self.IsWait = False
         else:
             self.IsWait = True
-        if '-noxunlei' in sys.argv:
+        if '--noxunlei' in sys.argv or '-nx' in sys.argv:
             self.IsXunlei = False
         else:
             self.IsXunlei = True
-        if '--update-team' in sys.argv:
+        if '--update-team' in sys.argv or '-u' in sys.argv:
             self.IsChangeteam = True
         else:
             self.IsChangeteam = False
-        if '-waitdays' in sys.argv:
-            self.waitdays = float(sys.argv[sys.argv.index('-waitdays')+1])
+        if '--waitdays' in sys.argv:
+            self.waitdays = float(sys.argv[sys.argv.index('--waitdays')+1])
+        elif '-wd' in sys.argv:
+            self.waitdays = float(sys.argv[sys.argv.index('-wd')+1])
         else:
             self.waitdays = 6.625
         config_global = yaml.load(open(os.path.join(self.workpath,'config_global.yml')).read())
@@ -61,6 +72,8 @@ class Downloader(object):
         self.transmissionrpc_download_path = config_global['transmissionrpc_download_path']
         config_tasks = yaml.load(open(os.path.join(self.workpath,'config_tasks.yml')).read())
         self.tasks = config_tasks
+        if os.path.exists(self.dldir) == False:
+            self.dldir = os.path.join(os.path.expanduser('~'),'Downloads','bangumi')
 
     def init_db_and_task(self):
         conn = sqlite3.connect(os.path.join(self.workpath,'bangumi.db'))
@@ -74,6 +87,7 @@ class Downloader(object):
             conn.commit()
         finally:
             conn.close()
+
         with open(os.path.join(self.workpath,'lixiantask.sh'),'w') as task:
             task.write('#!/bin/sh'+'\n')
         if not os.path.exists(os.path.join(self.workpath,'taskerror.sh')) or \
@@ -110,8 +124,6 @@ class Entry(Downloader):
         self.rss = self.tasks[item_key]['rss'][self.team]
         self.weekday = item_key[:3]
         self.series = item_key[4:]
-        if os.path.exists(os.path.join(self.dldir,item_key)) == False:
-            os.makedirs(os.path.join(self.dldir,item_key))
 
     def GetFeedinfo(self, **argv):
         "The function is used to parse feed and extract information"
@@ -216,6 +228,8 @@ class Entry(Downloader):
         conn.close()
 
     def download(self,command,comment):
+        if os.path.exists(os.path.join(self.dldir,self.item_key)) == False:
+            os.makedirs(os.path.join(self.dldir,self.item_key))
         if self.IsXunlei == True:
             print("Try to download directly")
             (status, output) = commands.getstatusoutput(command)
@@ -236,7 +250,7 @@ class Entry(Downloader):
         "Generate the executation command"
         command = ("lx download -bt magnet:?xt=urn:btih:" + self.infohash.encode('utf-8') +
                   " --continue --output '" + os.path.join(self.dldir,self.item_key).encode('utf-8') + "/'")
-        comment = self.title.encode('utf-8') + '  ' + self.PubDate.encode('utf-8')
+        comment = "echo \"%s # %s   %s\"  >> taskerror.sh" % (command, self.title.encode('utf-8'), self.PubDate.encode('utf-8'))
         return command, comment
 
     def Update_main(self):
@@ -290,7 +304,7 @@ def Cal_episode(title):
                    r"(?<=- )\d+",
                    r"\d+(?=[v|V]\d{1})",
                    r"\d+\.5",
-                   r"\d+(?=END|end|End| END| end| End)"
+                   r"\d+(?=END|end|End| END| end| End|_END)"
     ]
     for i in expressions:
         numbers = re.findall(i,title.encode('utf-8'))
@@ -301,7 +315,7 @@ def update():
     d = Downloader()
     d.init_db_and_task()
     for item_key in d.tasks.keys():
-        print(item_key),
+        print(item_key.encode('utf-8')),
         entry = Entry(item_key)
         entry.Update_main()
     content = d.Generate_mail()
@@ -312,13 +326,20 @@ def update():
         except:
             pass
 
+def testrss():
+    d = Downloader()
+    for item_key in d.tasks.keys():
+        entry = Entry(item_key)
+        if entry.GetFeedinfo() == []:
+            print("RSSError %s" % item_key.encode('utf-8'))
+
 def makeup():
     d = Downloader()
     d.init_db_and_task()
     conn = sqlite3.connect(os.path.join(d.workpath,'bangumi.db'))
     cur = conn.cursor()
-    if '-w' in sys.argv:
-        whitelist.append(sys.argv[sys.argv.index('-w')+1])
+    if '-wl' in sys.argv:
+        whitelist.append(sys.argv[sys.argv.index('-wl')+1])
     for item_key in d.tasks.keys():
         entry = Entry(item_key)
         if whitelist != []:
@@ -349,7 +370,7 @@ def makeup():
                     else:
                         episodeNums.add(tmp)
             episodeNums.discard(None)
-            print(item_key),
+            print(item_key.encode('utf-8')),
             print(episodeNums)
             cur.execute('SELECT title, PubDate, infohash, episode FROM Updated WHERE series = (?);',(entry.series,))
             a = cur.fetchall()
@@ -368,6 +389,8 @@ def main():
         update()
     elif sys.argv[1] == "makeup":
         makeup()
+    elif sys.argv[1] == "test":
+        testrss()
     else:
         print_help()
 
