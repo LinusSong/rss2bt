@@ -5,15 +5,15 @@ import sys
 import sqlite3
 import base64
 import time
-import commands
-import urllib2
+import subprocess
+import urllib.request, urllib.error, urllib.parse
 import smtplib
 from email.mime.text import MIMEText
 
 import yaml
 import feedparser
 
-blacklist = ['悠哉日常大王Repeat','偶像大師灰姑娘女孩Ⅱ','ToLoveRuDarkness2nd','魔法少女☆伊莉雅2weiHerz!']
+blacklist = []
 whitelist = []
 mail = {'Update':[],'No Update over 9 Days':[], 'Not Yet Updated':[],
         'Bad RSS or Banned': [],'Premature For Download':[],'Failed':[],
@@ -60,7 +60,7 @@ class Downloader(object):
             self.waitdays = float(sys.argv[sys.argv.index('-wd')+1])
         else:
             self.waitdays = 6.625
-        config_global = yaml.load(open(os.path.join(self.workpath,'config_global.yml')).read())
+        config_global = yaml.load(open(os.path.join(self.workpath,'config_global.yml'), encoding = 'utf-8').read())
         self.username = config_global['email_username']
         self.password = config_global['email_password']
         self.dldir = config_global['dldir']
@@ -70,7 +70,7 @@ class Downloader(object):
         self.transmissionrpc_user = config_global['transmissionrpc_user']
         self.transmissionrpc_password = config_global['transmissionrpc_password']
         self.transmissionrpc_download_path = config_global['transmissionrpc_download_path']
-        config_tasks = yaml.load(open(os.path.join(self.workpath,'config_tasks.yml')).read())
+        config_tasks = yaml.load(open(os.path.join(self.workpath,'config_tasks.yml'), encoding = 'utf-8').read())
         self.tasks = config_tasks
         if os.path.exists(self.dldir) == False:
             self.dldir = os.path.join(os.path.expanduser('~'),'Downloads','bangumi')
@@ -88,11 +88,11 @@ class Downloader(object):
         finally:
             conn.close()
 
-        with open(os.path.join(self.workpath,'lixiantask.sh'),'w') as task:
+        with open(os.path.join(self.workpath,'lixiantask.sh'),'w', encoding = 'utf-8') as task:
             task.write('#!/bin/sh'+'\n')
         if not os.path.exists(os.path.join(self.workpath,'taskerror.sh')) or \
-        open(os.path.join(self.workpath,'taskerror.sh')).readlines()[0] != '#!/bin/sh\n':
-            with open(os.path.join(self.workpath,'taskerror.sh'),'w') as task:
+        open(os.path.join(self.workpath,'taskerror.sh'), encoding = 'utf-8').readlines()[0] != '#!/bin/sh\n':
+            with open(os.path.join(self.workpath,'taskerror.sh'),'w', encoding = 'utf-8') as task:
                 task.write('#!/bin/sh'+'\n')
 
     def Generate_mail(self):
@@ -132,7 +132,7 @@ class Entry(Downloader):
             if HttpProxy == None:
                 handlers = None
             else:
-                proxy = urllib2.ProxyHandler( {"http":self.HttpProxy} )
+                proxy = urllib.request.ProxyHandler( {"https":self.HttpProxy} )
                 handlers = [proxy]
             if set_user_agent == True:
                 feedparser.USER_AGENT = ('Mozilla/5.0 (X11; Linux x86_64)'
@@ -141,13 +141,7 @@ class Entry(Downloader):
             feed = feedparser.parse(url,handlers=handlers)
             return feed
         try:
-            feed = parseFeed(rss)
-            if feed.entries == []:
-                time.sleep(5)
-                feed = parseFeed(rss,set_user_agent=True)
-            if feed.entries == []:
-                time.sleep(5)
-                feed = parseFeed(rss,set_user_agent=True,HttpProxy=self.HttpProxy)
+            feed = parseFeed(rss,set_user_agent=True,HttpProxy=self.HttpProxy)
         except:
             itemlist = []
         else:
@@ -159,7 +153,7 @@ class Entry(Downloader):
                     try:
                         itemlist.append({'title':i.title,
                                          'PubDate':time.strftime("%Y-%m-%d %H:%M:%S",time.strptime(i.published,"%a, %d %b %Y %H:%M:%S +0800")),
-                                         'infohash':base64.b16encode(base64.b32decode(i.enclosures[0].href[20:52])).lower(),
+                                         'infohash':base64.b16encode(base64.b32decode(i.enclosures[0].href[20:52])).decode().lower(),
                                          'episode':Cal_episode(i.title),
                                          'magnet_origin':i.enclosures[0].href})
                     except:
@@ -202,7 +196,7 @@ class Entry(Downloader):
     def Update_team(self):
         LastEpisode = self.Query_Last()[2]
         dict_tmp = {}
-        config_tasks = yaml.load(open(os.path.join(self.workpath,'config_tasks.yml')).read())
+        config_tasks = yaml.load(open(os.path.join(self.workpath,'config_tasks.yml'), encoding = 'utf-8').read())
         for team in config_tasks[self.item_key]['rss']:
             rss = config_tasks[self.item_key]['rss'][team]
             iteminfo = self.GetFeedinfo(rss=rss)[0]
@@ -211,8 +205,8 @@ class Entry(Downloader):
             if episode != None and episode > LastEpisode:
                 dict_tmp.update({team:PubDate})
         if dict_tmp != {}:
-            MinPubDate = min([i for i in dict_tmp.values()])
-            for team,PubDate in dict_tmp.items():
+            MinPubDate = min([i for i in list(dict_tmp.values())])
+            for team,PubDate in list(dict_tmp.items()):
                 if PubDate == MinPubDate:
                     config_tasks[self.item_key]['team'] = team
                     self.team = team
@@ -232,15 +226,15 @@ class Entry(Downloader):
             os.makedirs(os.path.join(self.dldir,self.item_key))
         if self.IsXunlei == True:
             print("Try to download directly")
-            (status, output) = commands.getstatusoutput(command)
+            (status, output) = subprocess.getstatusoutput(command)
         if self.IsXunlei == False or status != 0:
             try:
                 import transmissionrpc
                 print("try transmissionrpc")
                 tc = transmissionrpc.Client(self.transmissionrpc_server,port=9091,user=self.transmissionrpc_user,password=self.transmissionrpc_password)
-                tr = tc.add_torrent(self.magnet_origin,download_dir=os.path.join(self.transmissionrpc_download_path,self.item_key).encode('utf-8'))
+                tr = tc.add_torrent(self.magnet_origin,download_dir=self.transmissionrpc_download_path + '/' + self.item_key)
             except:
-                with open(os.path.join(self.workpath,'taskerror.sh'),'a') as target:
+                with open(os.path.join(self.workpath,'taskerror.sh'),'a', encoding = 'utf-8') as target:
                     target.write(command + ' # ' + comment + '\n')
                 raise Exception("Failed")
             else:
@@ -248,9 +242,9 @@ class Entry(Downloader):
 
     def Generate_command(self):
         "Generate the executation command"
-        command = ("lx download -bt magnet:?xt=urn:btih:" + self.infohash.encode('utf-8') +
-                  " --continue --output '" + os.path.join(self.dldir,self.item_key).encode('utf-8') + "/'")
-        comment = "echo \"%s # %s   %s\"  >> taskerror.sh" % (command, self.title.encode('utf-8'), self.PubDate.encode('utf-8'))
+        command = "lx download -bt magnet:?xt=urn:btih:%s --continue --output \'%s\'" \
+                   % (self.infohash, os.path.join(self.dldir,self.item_key))
+        comment = "echo \"%s # %s   %s\" >> taskerror.sh" % (command, self.title, self.PubDate)
         return command, comment
 
     def Update_main(self):
@@ -264,32 +258,32 @@ class Entry(Downloader):
                 print('Update')
             elif self.IsDownload == False and self.episode != None:
                 mail['Update'].append({self.item_key:self.team + ", " + str(self.episode)})
-                with open(os.path.join(self.workpath,'lixiantask.sh'),'a') as task:
+                with open(os.path.join(self.workpath,'lixiantask.sh'),'a', encoding = 'utf-8') as task:
                     task.write(command + ' # ' + comment + '\n')
                 print('Update')
             elif self.episode == None:
                 mail['Please Check Manually'].append({self.item_key:self.team})
-                with open(os.path.join(self.workpath,'taskerror.sh'),'a') as task:
+                with open(os.path.join(self.workpath,'taskerror.sh'),'a', encoding = 'utf-8') as task:
                     task.write(command + ' # ' + comment + '\n')
                 print('Please Check Manually')
-        except Exception,reason:
+        except Exception as reason:
             if str(reason) == "Premature For Parse":
-                print(str(reason))
+                print((str(reason)))
             elif str(reason) == "No Update over 9 Days" and self.IsChangeteam:
                 print("Try to change team")
                 result = self.Update_team()
                 if result != None:
-                    print "Success. Retry to update"
+                    print("Success. Retry to update")
                     self.Update_main()
                 else:
                     print("Failed")
                     mail[str(reason)].append({self.item_key:self.team})
             elif str(reason) in mail:
-                print(str(reason))
+                print((str(reason)))
                 mail[str(reason)].append({self.item_key:self.team})
             else:
-                print(Exception),
-                print(str(reason))
+                print((Exception), end=' ')
+                print((str(reason)))
 
 def Cal_timegone(timestr):
     "Calculate how long time has gone"
@@ -307,15 +301,15 @@ def Cal_episode(title):
                    r"\d+(?=END|end|End| END| end| End|_END)"
     ]
     for i in expressions:
-        numbers = re.findall(i,title.encode('utf-8'))
+        numbers = re.findall(i,title)
         if len(numbers) == 1:
             return int(numbers[0])
 
 def update():
     d = Downloader()
     d.init_db_and_task()
-    for item_key in d.tasks.keys():
-        print(item_key.encode('utf-8')),
+    for item_key in list(d.tasks.keys()):
+        print(item_key, end=" ")
         entry = Entry(item_key)
         entry.Update_main()
     content = d.Generate_mail()
@@ -328,10 +322,10 @@ def update():
 
 def testrss():
     d = Downloader()
-    for item_key in d.tasks.keys():
+    for item_key in list(d.tasks.keys()):
         entry = Entry(item_key)
         if entry.GetFeedinfo() == []:
-            print("RSSError %s" % item_key.encode('utf-8'))
+            print("RSSError %s" % item_key)
 
 def makeup():
     d = Downloader()
@@ -340,13 +334,13 @@ def makeup():
     cur = conn.cursor()
     if '-wl' in sys.argv:
         whitelist.append(sys.argv[sys.argv.index('-wl')+1])
-    for item_key in d.tasks.keys():
+    for item_key in list(d.tasks.keys()):
         entry = Entry(item_key)
         if whitelist != []:
-            if not entry.series.encode('utf-8') in whitelist:
+            if not entry.series in whitelist:
                 continue
         else:
-            if entry.series.encode('utf-8') in blacklist:
+            if entry.series in blacklist:
                 continue
         if '-net' in sys.argv:
             itemlist = entry.GetFeedinfo()
@@ -370,7 +364,7 @@ def makeup():
                     else:
                         episodeNums.add(tmp)
             episodeNums.discard(None)
-            print(item_key.encode('utf-8')),
+            print(item_key)
             print(episodeNums)
             cur.execute('SELECT title, PubDate, infohash, episode FROM Updated WHERE series = (?);',(entry.series,))
             a = cur.fetchall()
@@ -378,7 +372,7 @@ def makeup():
                 entry.title, entry.PubDate, entry.infohash, entry.episode = i
                 if entry.episode not in episodeNums:
                     (command, comment) = entry.Generate_command()
-                    with open(os.path.join(d.workpath,'lixiantask.sh'),'a') as task:
+                    with open(os.path.join(d.workpath,'lixiantask.sh'),'a', encoding = 'utf-8') as task:
                         task.write(command + ' # ' + comment + '\n')
     conn.close()
 
