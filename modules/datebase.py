@@ -5,6 +5,8 @@ from modules.global_var import DATEBASE
 def initialize_db():
     """若没有数据库，则建立之
     数据库结构由此规定
+    datebase当中将不能添加不能获取episode的entry
+    datebase中所有时间以UTC表示
     """
     with sqlite3.connect(DATEBASE) as conn:
         cur = conn.cursor()

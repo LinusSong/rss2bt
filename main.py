@@ -45,7 +45,8 @@ def parse_args_cli():
     overview of the function.
 
     Args:
-        main.py [-v] [-h] [-c CONFIG] [-dp DOWNLOAD_PATH] [-hp HTTPPROXY]
+        main.py [-v] [-h] [-cg CONFIG_GLOBAL] [-ck CONFIG_TASKS]
+               [-dp DOWNLOAD_PATH] [-hp HTTPPROXY]
                [-eu EMAIL_USERNAME] [-ep EMAIL_PASSWORD] [-er EMAIL_RECEIVER]
                [-ts TRANSMISSIONRPC_SERVER] [-tu TRANSMISSIONRPC_USER]
                [-tp TRANSMISSIONRPC_PASSWORD]
@@ -135,13 +136,17 @@ def parse_args_cli():
     group_general.add_argument('-h', '--help',
         action='help',
         help='show this help message and exit')
-    group_general.add_argument('-c', dest='config',
-        default=os.path.join(WORKPATH, 'config.yml'),
+    group_general.add_argument('-cg', dest='config_global',
+        default=os.path.join(WORKPATH, 'config_global.yml'),
+        help='use an existing configuaration file'
+             '(default:config.yml in the program path)')
+    group_general.add_argument('-ct', dest='config_tasks',
+        default=os.path.join(WORKPATH, 'config_tasks.yml'),
         help='use an existing configuaration file'
              '(default:config.yml in the program path)')
 
     group_config = parser.add_argument_group('config arguments')
-    group_config.add_argument('-dp', dest='download_path')
+    group_config.add_argument('--download_path', dest='download_path')
     group_config.add_argument('-hp', dest='httpproxy')
     group_config.add_argument('-eu', dest='email_username')
     group_config.add_argument('-ep', dest='email_password')

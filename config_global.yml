@@ -1,0 +1,11 @@
+# please set unused arguments to none and do NOT delete them.
+
+download_path: '/run/user/1000/gvfs/smb-share:server=raspberrypi,share=sda1/bangumi'
+httpproxy: '127.0.0.1:8123'
+email_username: 'zsewqa163@163.com'
+email_password: 'zjezPgOoHQA7oboi'
+email_receiver: '2257543047@qq.com'
+transmissionrpc_server: '23.83.247.48'
+transmissionrpc_user: 'your_username11@'
+transmissionrpc_password: 'your_password11@'
+transmissionrpc_download_path: '/root/Dropbox/Others/bangumi'

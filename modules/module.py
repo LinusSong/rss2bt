@@ -1,6 +1,7 @@
 import os
 import base64
 import time
+import re
 
 import transmissionrpc
 import yaml
@@ -36,11 +37,15 @@ def merge_args_yaml(args):
 
     """
 
-    config_yaml = yaml.load(open(args.config,encoding = 'utf-8').read())
+    config_yaml = yaml.load(open(args.config_global,encoding='utf-8').read())
     config = config_yaml.copy()
     config.update(vars(args))
     del config['func']
-    del config['config']
+    del config['config_global']
+    del config['config_tasks']
+    config['tasks'] = yaml.load(open(args.config_tasks,encoding='utf-8').read())
+    if config['httpproxy'].lower() == 'none':
+        config['httpproxy'] = None
     if os.path.exists(config['download_path']) == False:
         config['download_path'] = os.path.join(os.path.expanduser('~'),'Downloads','bangumi')
     return config
@@ -64,14 +69,28 @@ def initialize_tasks():
     with open(TASKS,'w',encoding='utf-8') as t:
         t.write('#!/bin/sh'+'\n')
 
+def get_source_from_rss(rss):
+    if rss.find('https://bangumi.moe/rss/tags') == 0:
+        source = 'bangumi_moe'
+    elif rss.find('https://share.dmhy.org/topics/rss/rss.xml?keyword=') == 0:
+        source = 'share_dmhy_org'
+    elif rss.find('https://open.acgnx.se/rss-search=') == 0:
+        source = 'share_acgnx_se'
+    elif rss.find('https://share.xfsub.com/') == 0:
+        source = 'share_xfsub_com'
+    else:
+        raise Exception
+    return source
+
 class Item(object):
     def __init__(self, config, item_key):
         self.config = config
         self.item_key = item_key
-        self.source = config['tasks'][item_key]['source']
         self.update_interval = config['tasks'][item_key]['update_interval']
         self.team = config['tasks'][item_key]['team']
-        self.rss = config['tasks'][item_key]['rss'][self.team]
+        if self.team:
+            self.rss = config['tasks'][item_key]['rss'][self.team]
+            self.source = get_source_from_rss(self.rss)
         self.weekday = item_key[:3]
         self.series = item_key[4:]
 
@@ -95,16 +114,18 @@ class Item(object):
             pass
         elif (calculate_timegone(latest_entry_db['pubdate']) <=
             (self.update_interval-self.config['reducedintervals'])*86400):
-            flag = 'premature for download'
+            flag = 'skipped'
             return entries_needed, flag
         entries = self.get_entries()
         for i in entries:
 #条件：entry可提取集数，发布时间超过一小时,集数大于数据库里最新一集
 #由于latest_entry_db可能为None，故单列最后一条
+#新增条件：去重复剧集的任务交给这边，方法是选择发布晚的那一集，不看简繁
             if (i['episode'] != None and
-                calculate_timegone(i['pubdate']) >= 3600 and
+                3600 <= calculate_timegone(i['pubdate']) <= 90*86400 and
                 (latest_entry_db == None or
-                i['episode'] > latest_entry_db['episode'])):
+                i['episode'] > latest_entry_db['episode']) and
+                i['episode'] not in [x['episode'] for x in entries_needed]):
                     entries_needed.append(i)
         if entries_needed == []:
             if (latest_entry_db != None and
@@ -143,11 +164,12 @@ class Item(object):
             os.makedirs(dldir)
         if self.config['downloadmethod'] == 'bt':
             try:
-                print("try transmissionrpc")
+                print("    try transmissionrpc", end=' ')
                 self.download_bt(entry)
             except:
+                print("fail")
                 raise TransmissionrpcError
             else:
-                print("Use Transmissionrpc to Download")
+                print("success")
         elif self.config['downloadmethod'] == 'xl':
             self.write_sh(entry)

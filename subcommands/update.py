@@ -3,6 +3,7 @@ import logging
 from modules.module import *
 from modules.datebase import *
 from modules.email import EmailSender
+from modules.error import RssError, TransmissionrpcError
 
 def update(args):
     config = merge_args_yaml(args)

@@ -1,5 +1,6 @@
 import smtplib
 from email.mime.text import MIMEText
+import yaml
 
 class EmailSender(object):
     """此模块的设计目的是为了在程序运行过程中收集需要发送的数据，并最终发送
