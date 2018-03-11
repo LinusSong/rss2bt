@@ -139,11 +139,11 @@ def parse_args_cli():
     group_general.add_argument('-cg', dest='config_global',
         default=os.path.join(WORKPATH, 'config_global.yml'),
         help='use an existing configuaration file'
-             '(default:config.yml in the program path)')
+             '(default:config_global.yml in the program path)')
     group_general.add_argument('-ct', dest='config_tasks',
         default=os.path.join(WORKPATH, 'config_tasks.yml'),
         help='use an existing configuaration file'
-             '(default:config.yml in the program path)')
+             '(default:config_tasks.yml in the program path)')
 
     group_config = parser.add_argument_group('config arguments')
     group_config.add_argument('--download_path', dest='download_path')
@@ -155,6 +155,8 @@ def parse_args_cli():
     group_config.add_argument('-tu', dest='transmissionrpc_user')
     group_config.add_argument('-tp', dest='transmissionrpc_password')
     group_config.add_argument('-td', dest='transmissionrpc_download_path')
+    group_config.add_argument('-ar', dest='aria2_rpc')
+    group_config.add_argument('-ad', dest='aria2_download_path')
 
     args = parser.parse_args()
     logging.info(args)

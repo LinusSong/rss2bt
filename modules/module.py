@@ -199,9 +199,6 @@ class Item(object):
             t.write(url + ' # ' + entry['title'] + '\n')
 
     def download(self,entry):
-        dldir = os.path.join(self.config['download_path'],self.item_key)
-        if os.path.exists(dldir) == False:
-            os.makedirs(dldir)
         if self.config['downloadmethod'] == 'bt':
             try:
                 self.download_bt(entry)
