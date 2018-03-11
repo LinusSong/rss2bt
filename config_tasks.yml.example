@@ -1,9 +1,8 @@
-tasks:
-  星期一,小魔女學園:
-    rss:
-      動漫國: https://share.dmhy.org/topics/rss/rss.xml?keyword=%E5%B0%8F%E9%AD%94%E5%A5%B3%E5%AD%B8+team_id%3A303+%E7%AE%80+720&sort_id=2
-      千夏.茉語: https://share.dmhy.org/topics/rss/rss.xml?keyword=%E5%B0%8F%E9%AD%94%E5%A5%B3%E5%AD%B8+team_id%3A283+%E7%B9%81+720+MP4&sort_id=2
-      極影: https://share.dmhy.org/topics/rss/rss.xml?keyword=%E5%B0%8F%E9%AD%94%E5%A5%B3%E5%AD%B8+team_id%3A185+GB+720+MP4&sort_id=2
-    source: share_dmhy_org
-    team: 極影
-    update_interval: 7
+星期一,小魔女學園:
+  rss:
+    動漫國: https://share.dmhy.org/topics/rss/rss.xml?keyword=%E5%B0%8F%E9%AD%94%E5%A5%B3%E5%AD%B8+team_id%3A303+%E7%AE%80+720&sort_id=2
+    千夏.茉語: https://share.dmhy.org/topics/rss/rss.xml?keyword=%E5%B0%8F%E9%AD%94%E5%A5%B3%E5%AD%B8+team_id%3A283+%E7%B9%81+720+MP4&sort_id=2
+    極影: https://share.dmhy.org/topics/rss/rss.xml?keyword=%E5%B0%8F%E9%AD%94%E5%A5%B3%E5%AD%B8+team_id%3A185+GB+720+MP4&sort_id=2
+  source: share_dmhy_org
+  team: 極影
+  update_interval: 7
