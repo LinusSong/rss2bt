@@ -1,4 +1,4 @@
-from parser.tackles import extract_episode, parse_feed, to_iso_utc
+from rssparser.tackles import extract_episode, parse_feed, to_iso_utc
 
 def get_entries(url,source,weekday,series,team,httpproxy=None):
     "The function is used to parse feed and extract information"
@@ -12,9 +12,9 @@ def get_entries(url,source,weekday,series,team,httpproxy=None):
             'team':team,
             'title': i.title,
             'page_link': i.link,
-            'pubdate': to_iso_utc(i.published,"%a, %d %b %Y %H:%M:%S %z"),
+            'pubdate': to_iso_utc(i.published,"%a, %d %b %Y %H:%M:%S %Z"),
             'episode': extract_episode(i.title),
             'download_link': i.enclosures[0].href,
-            'link_type': 'magnet'
+            'link_type': 'torrent'
             })
     return entries

@@ -1,7 +1,7 @@
 import re
 from bs4 import BeautifulSoup
 
-from parser.tackles import extract_episode, parse_page, to_iso_utc
+from rssparser.tackles import extract_episode, parse_page, to_iso_utc
 
 def get_entries(url,source,weekday,series,team,httpproxy=None):
     page = parse_page(url, set_user_agent=True, httpproxy=httpproxy)

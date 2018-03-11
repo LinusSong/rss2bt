@@ -111,7 +111,7 @@ def get_episodenums_by_series(series):
         cur = conn.cursor()
         cur.execute('SELECT title FROM updates WHERE series=?;',(series,))
         t = cur.fetchall()
-        from parser.tackles import extract_episode
+        from rssparser.tackles import extract_episode
         for i in t:
             episode_nums.add(extract_episode(name))
     episode_nums.discard(None)

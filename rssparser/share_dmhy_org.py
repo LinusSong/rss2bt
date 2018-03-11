@@ -1,4 +1,4 @@
-from parser.tackles import extract_episode, parse_feed, to_iso_utc
+from rssparser.tackles import extract_episode, parse_feed, to_iso_utc
 
 def get_entries(url,source,weekday,series,team,httpproxy=None):
     "The function is used to parse feed and extract information"

@@ -1,6 +1,6 @@
 from modules.module import *
 from modules.datebase import *
-from parser.tackles import extract_episode
+from rssparser.tackles import extract_episode
 
 def checkup(args):
     config = merge_args_yaml(args)

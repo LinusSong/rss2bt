@@ -108,8 +108,8 @@ def parse_args_cli():
     group.add_argument('-nw', '--nowaiting', action="store_true",
         help='no waiting days before parsing feed')
     parser_update.add_argument('-d', '--downloadmethod',
-        nargs="?", const='bt', choices=['bt','xl'], default='bt',
-        help='download by transmissionrpc after parsing magnet'
+        nargs="?", const='bt', choices=['bt','xl','aria2'], default='bt',
+        help='download by transmissionrpc or aria2 after parsing magnet'
              ' or create xunlei-lixian script')
     parser_update.set_defaults(func=update)
 

@@ -1,15 +1,19 @@
-import os
 import base64
-import time
+import datetime
+import json
+import os
 import re
+import sys
+import time
 
+import requests
 import transmissionrpc
 import yaml
 
-from parser.parser import get_entries
+from rssparser.parser import get_entries
 from modules.datebase import *
 from modules.global_var import *
-from modules.error import TransmissionrpcError
+from modules.error import TransmissionrpcError, Aria2Error
 
 def merge_args_yaml(args):
     """Merges arguments from parse_args_cli and config.yml.
@@ -61,8 +65,9 @@ def calculate_timegone(timestr):
         time_gone   the seconds that has gone from timestr to now.
     """
 
-    time_seconds = time.mktime(time.strptime(timestr,'%Y-%m-%d %H:%M:%SZ'))
-    time_gone = time.mktime(time.gmtime()) - time_seconds
+    d = datetime.datetime.strptime(timestr, '%Y-%m-%d %H:%M:%SZ')
+    a = datetime.datetime.utcnow()- d
+    time_gone = a.total_seconds()
     return time_gone
 
 def initialize_tasks():
@@ -81,6 +86,11 @@ def get_source_from_rss(rss):
     else:
         raise Exception
     return source
+
+def careful_print(s):
+    t = sys.stdout.encoding
+    b = s.encode(t,'ignore').decode(t)
+    print(b)
 
 class Item(object):
     def __init__(self, config, item_key):
@@ -135,6 +145,34 @@ class Item(object):
                 flag = 'not yet updated'
         return entries_needed, flag
 
+    def download_aria2(self,entry):
+        aria2_rpc = self.config['aria2_rpc']
+        tmp = re.match('http(s?)://token:(.*)@(.*)/jsonrpc',aria2_rpc)
+        if tmp:
+            https_tag, token, ip_port = tmp.groups()
+            aria2_rpc = 'http' + https_tag + '://' + ip_port + '/jsonrpc'
+        elif re.match('http(s?)://(.*)/jsonrpc',aria2_rpc):
+            token = None
+        else:
+            raise Aria2Error
+        if token:
+            payload = [{
+            	'jsonrpc': '2.0',
+            	'id': 1,
+            	'method': 'aria2.addUri',
+            	'params': ['token:'+token, [entry['download_link']], {}]
+            	}]
+        else:
+            payload = [{
+            	'jsonrpc': '2.0',
+            	'id': 1,
+            	'method': 'aria2.addUri',
+            	'params': [[entry['download_link']], {}]
+            	}]
+        response = requests.post(aria2_rpc, data=json.dumps(payload))
+        if not response.ok:
+            raise Aria2Error
+
     def download_bt(self,entry):
         tc = transmissionrpc.Client(
             self.config['transmissionrpc_server'],
@@ -164,12 +202,10 @@ class Item(object):
             os.makedirs(dldir)
         if self.config['downloadmethod'] == 'bt':
             try:
-                print("    try transmissionrpc", end=' ')
                 self.download_bt(entry)
             except:
-                print("fail")
                 raise TransmissionrpcError
-            else:
-                print("success")
         elif self.config['downloadmethod'] == 'xl':
             self.write_sh(entry)
+        elif self.config['downloadmethod'] == 'aria2':
+            self.download_aria2(entry)

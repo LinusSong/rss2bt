@@ -3,7 +3,7 @@ import logging
 from modules.module import *
 from modules.datebase import *
 from modules.email import EmailSender
-from modules.error import RssError, TransmissionrpcError
+from modules.error import RssError, TransmissionrpcError, Aria2Error
 
 def update(args):
     config = merge_args_yaml(args)
@@ -17,14 +17,21 @@ def update(args):
             entries_needed, flag = item.get_entries_needed()
         except RssError:
             logging.error(item_key)
+            print('RssError')
+            continue
         if flag == None:
             for entry in entries_needed:
                 print("    " + entry['title'])
                 try:
                     item.download(entry)
                 except TransmissionrpcError:
+                    print("    try transmissionrpc  fail")
+                    logging.error(item_key,entry)
+                except Aria2Error:
+                    print("    try aria2  fail")
                     logging.error(item_key,entry)
                 else:
+                    print("    success")
                     update_db(entry)
             emailsender.add_text(item_key,entries=entries_needed)
         else:
