@@ -146,6 +146,8 @@ class Item(object):
         return entries_needed, flag
 
     def download_aria2(self,entry):
+#此处不能使用os.path.join，否则Windows上会使用'\\'，而不是'/'
+        dldir = self.config['aria2_download_path'] + '/' + self.item_key
         aria2_rpc = self.config['aria2_rpc']
         tmp = re.match('http(s?)://token:(.*)@(.*)/jsonrpc',aria2_rpc)
         if tmp:
@@ -160,14 +162,14 @@ class Item(object):
             	'jsonrpc': '2.0',
             	'id': 1,
             	'method': 'aria2.addUri',
-            	'params': ['token:'+token, [entry['download_link']], {}]
+            	'params': ['token:'+token, [entry['download_link']], {'dir':dldir}]
             	}]
         else:
             payload = [{
             	'jsonrpc': '2.0',
             	'id': 1,
             	'method': 'aria2.addUri',
-            	'params': [[entry['download_link']], {}]
+            	'params': [[entry['download_link']], {'dir':dldir}]
             	}]
         response = requests.post(aria2_rpc, data=json.dumps(payload))
         if not response.ok:
