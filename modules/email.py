@@ -1,5 +1,6 @@
 import smtplib
 from email.mime.text import MIMEText
+
 import yaml
 
 class EmailSender(object):
