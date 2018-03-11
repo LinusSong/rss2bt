@@ -1,52 +1,24 @@
-# RssToXunlei_lixian
-The script is exactly written for [share.dmhy.org](http://share.dmhy.org) and [xunlei_lixian](https://github.com/iambus/xunlei-lixian).
+# rss2bt
+Use RSS to parse your favourite videos and download them automatically.
 
 ##Requirements:
+- python3
 ```
 sudo pip install requests PyYAML feedparser bs4 transmissionrpc
 ```
 
 ##Feature:
-- Decode Base32 to Base16, since Xunlei doesn't accept Base32 encoded SHA-1 hash.
-- Work as a rss parser. Because [share.dmhy.org](http://share.dmhy.org) has a very strict limit on your visit frequency, [flexget](http://flexget.com)  easily leads you to 403. The script greatly reduces your visit frequency.
+- This script can work as a rss parser and set the time interval. Because [share.dmhy.org](http://share.dmhy.org) has a very strict limit on your visit frequency, [flexget](http://flexget.com) may lead you to 403.
 - Use sqlite to record your download.
+- Avoid to download the same episode pubulished by different uploaders or with different versions.
 
 ##Configuration:
 - Your need to create two config files called `config_global.yml` and `config_tasks.yml`, which syntax is very similar with [flexget](http://flexget.com). Examples have been given.
-- All of the parameters in `config_global.yml` are optional:
- - `email_username` and `email_password` are used to send notification emails. `toMail` is the email which you use to receive the notification.
- - `dldir` is the download directory.
- - `HttpProxy` is the http proxy used when failing to parse feed normally.
- - `transmissionrpc_server`, `transmissionrpc_user`, `transmissionrpc_password`, `transmissionrpc_download_path` are for `transmission`.
+- You can choose a download method at `config_global.yml`. There are 3 options, aria2, transmission, or writing to a text directly.
 - You can create `config_tasks.yml` by [Animelist](https://github.com/LinusSong/Animelist)
 
 ##Usage:
 ```
-python rss2lx.py <commands> <parameters>
+python3 main.py <commands> <parameters>
 ```
-
-####commands and parameters:
-- update [-download|--update-team|-nowait|-noxunlei] [-waitdays days] ---update bangumi
-- markup [-net|-db] [-w item]  --- mark up the the episodes which are not recorded and downloaded
-- test   --- test the rss addresses
-
-####Explanation:
-- download: download directly
-- update-team: subscribe the current team for another team who publishes the latest episode most quickly.
-- nowait: in case Xunlei doesn't finish downloading, the episode will not be updated into database in 1.5 hour after an eipsode publishes. This parameter revoke this limit.
-- noxunlei: don't use Xunlei, use transmission directly.
-- waitdays: 6.625 days are waited before another parse in default, and this parameter is to change it.
-- net: make up the database from RSS feed.
-- db: find the items which is not downloaded and write commands for them to lixiantask.sh
-- w: only the chosen item will be checked.
-
-####Examples:
-```
-python rss2lx.py update -download # update database and download directly
-python rss2lx.py markup -net -db -w Charlotte # make up the database about Charlotte and write commands for items which is not downloaded to lixiantask.sh
-```
-
-All failure will be record in  `taskerror.sh`.
-
-##One more thing
-I will share my bangumi list every quarter!
+Please use `python3 main.py -h` to read the detailed uasage.

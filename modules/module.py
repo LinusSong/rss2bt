@@ -72,7 +72,7 @@ def calculate_timegone(timestr):
 
 def initialize_tasks():
     with open(TASKS,'w',encoding='utf-8') as t:
-        t.write('#!/bin/sh'+'\n')
+        pass
 
 def get_source_from_rss(rss):
     if rss.find('https://bangumi.moe/rss/tags') == 0:

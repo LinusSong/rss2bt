@@ -1,14 +1,3 @@
-# please set unused arguments to none and don't delete them.
-
-download_path: '/home'
-httpproxy: '192.168.1.1:8080'
-email_username: 'username@163.com'
-email_password: 'password'
-email_receiver: 'tomail@qq.com'
-transmissionrpc_server: '127.0.0.1'
-transmissionrpc_user: 'your_username'
-transmissionrpc_password: 'your_password'
-transmissionrpc_download_path: '/home'
 tasks:
   星期一,小魔女學園:
     rss:
